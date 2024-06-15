@@ -73,7 +73,7 @@ class Integration_Siigo_WC extends WC_Siigo_Integration
             foreach ($products as $product){
                 $product_id = wc_get_product_id_by_sku($product['code']);
                 $price = $product['prices'][0]['price_list'][0]['value'] ?? 0;
-                $sale_price = $product['prices'][0]['price_list'][1]['value'] ?? 0;
+                $sale_price = $product['prices'][0]['price_list'][1]['value'] ?? '';
 
                 if($product_id){
                     $wc_product = wc_get_product($product_id);
@@ -220,7 +220,7 @@ class Integration_Siigo_WC extends WC_Siigo_Integration
                     "address" => $order->get_billing_address_1() ?: $order->get_shipping_address_1(),
                     "city" => [
                         "country_code" => $order->get_billing_country() ?: $order->get_shipping_country(),
-                        "state_code" => $states_dane[$state],
+                        "state_code" => $state_code,
                         "city_code" => $city_code
                     ],
                     "postal_code" => $order->get_billing_postcode() ?: $order->get_shipping_postcode(),
