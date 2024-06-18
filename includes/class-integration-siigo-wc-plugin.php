@@ -109,6 +109,9 @@ class Integration_Siigo_WC_Plugin
         add_action('woocommerce_order_status_changed', array('Integration_Siigo_WC', 'generate_invoice'), 10, 3);
         add_action('integration_siigo_wc_smp_schedule', array('Integration_Siigo_WC', 'sync_products'));
         add_action('wp_ajax_integration_siigo_sync_products', array($this, 'ajax_integration_siigo_sync_products'));
+        add_action('woocommerce_admin_order_data_after_order_details',  array($this, 'display_custom_editable_field_on_admin_orders') );
+        add_action('woocommerce_process_shop_order_meta', array($this, 'save_order_custom_field_meta'));
+
 
         add_action(
             'woocommerce_set_additional_field_value',
@@ -324,16 +327,52 @@ class Integration_Siigo_WC_Plugin
         $billing_dni = sanitize_text_field($_POST['billing_dni']);
         $shipping_type_document = sanitize_text_field($_POST['shipping_type_document']);
         $shipping_dni = sanitize_text_field($_POST['shipping_dni']);
+        $key_field_dni = $billing_dni ? '_billing_dni' :  '_shipping_dni';
+        $type_document = $billing_type_document ?: $shipping_type_document;
+        $dni = $billing_dni ?: $shipping_dni;
 
-        if($billing_type_document === 'NIT' && $billing_dni){
-            $dv = Integration_Siigo_WC::calculateDv($billing_dni);
-            $nit = "$billing_dni-$dv";
-            update_post_meta( $order_id, '_billing_dni', $nit );
+        if($type_document === 'NIT'){
+            $dv = Integration_Siigo_WC::calculateDv($dni);
+            $dni = "$dni-$dv";
         }
-        if($shipping_type_document === 'NIT' && $shipping_dni){
-            $dv = Integration_Siigo_WC::calculateDv($shipping_dni);
-            $nit = "$shipping_dni-$dv";
-            update_post_meta( $order_id, '_shipping_dni', $nit );
+
+        update_post_meta( $order_id, $key_field_dni, $dni );
+    }
+
+    public function display_custom_editable_field_on_admin_orders( $order ): void
+    {
+
+        ?>
+        <br class="clear" />
+        <div class="example_data_wrapper">
+            <?php
+            woocommerce_wp_select(array(
+                'id' => '_billing_type_document',
+                'label' => __('Tipo de documento'),
+                'options' => [
+                    'CC' => 'Cédula de ciudadanía',
+                    'NIT' => '(NIT) Número de identificación tributaria'
+                ],
+                'wrapper_class' => 'wc-enhanced-select'
+            ));
+
+            woocommerce_wp_text_input( array(
+                'id' => '_billing_dni',
+                'label' => __('Número de documento:'),
+                'wrapper_class' => 'form-field-wide'
+            ) );
+            ?>
+        </div>
+        <?php
+    }
+
+    public function save_order_custom_field_meta( $order_id ){
+        if ( isset($_POST['_billing_type_document']) ){
+            update_post_meta( $order_id, '_billing_type_document', sanitize_text_field($_POST['_billing_type_document']));
         }
+        if ( isset($_POST['_billing_dni']) ){
+            update_post_meta( $order_id, '_billing_dni', sanitize_text_field($_POST['_billing_dni']));
+        }
+
     }
 }
