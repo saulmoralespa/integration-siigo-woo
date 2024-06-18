@@ -4,7 +4,7 @@ use Saulmoralespa\Siigo\Client;
 use Automattic\WooCommerce\Blocks\Package;
 use Automattic\WooCommerce\Blocks\Domain\Services\CheckoutFields;
 
-class Integration_Siigo_WC extends WC_Siigo_Integration
+class Integration_Siigo_WC
 {
     private static ?Client $siigo = null;
 
@@ -120,7 +120,7 @@ class Integration_Siigo_WC extends WC_Siigo_Integration
                             "price_list" => [
                                 [
                                     "position" => 1,
-                                    "value" => $product->get_price()
+                                    "value" => wc_format_decimal($product->get_price(), 0)
                                 ]
                             ]
                         ]
@@ -290,8 +290,8 @@ class Integration_Siigo_WC extends WC_Siigo_Integration
                     "code" => $product->get_sku(),
                     "description" => $product->get_name(),
                     "quantity" => $item->get_quantity(),
-                    "discount" => $item->get_subtotal() - $item->get_total(),
-                    "price" => $order->get_line_total( $item )
+                    "discount" => wc_format_decimal($item->get_subtotal() - $item->get_total(), 0),
+                    "price" => wc_format_decimal($item->get_total() / $item->get_quantity(), 0)
                 ];
 
                 if($tax_percent && self::$integration_settings->tax){
@@ -300,7 +300,7 @@ class Integration_Siigo_WC extends WC_Siigo_Integration
                             "id" => self::$integration_settings->tax
                         ]
                     ];
-                    $items[count($items) - 1]['taxed_price']  = $item->get_total() + $tax_total;
+                    $items[count($items) - 1]['taxed_price']  = wc_format_decimal($item->get_total() + $tax_total, 0);
                 }
             }
 
@@ -309,7 +309,7 @@ class Integration_Siigo_WC extends WC_Siigo_Integration
                     "code" => self::SKU_SHIPPING,
                     "description" => 'Envío',
                     "quantity" => 1,
-                    "price" => $order->get_shipping_total()
+                    "price" => wc_format_decimal($order->get_shipping_total(), 0)
                 ];
             }
 
@@ -317,9 +317,13 @@ class Integration_Siigo_WC extends WC_Siigo_Integration
             if(!self::$integration_settings->seller_generate_invoice) throw new Exception('Vendedor no configurado');
             if(!self::$integration_settings->payment) throw new Exception('Método de pago no configurado');
 
+            $queries = [
+                "type" => "FV"
+            ];
+
             $dataInvoice = [
                 "document" => [
-                    "id" => self::$integration_settings->document_type,
+                    "id" => (int)self::$integration_settings->document_type,
                 ],
                 "date" => wp_date('Y-m-d'),
                 "customer" => [
@@ -328,13 +332,24 @@ class Integration_Siigo_WC extends WC_Siigo_Integration
                 ],
                 "seller" => self::$integration_settings->seller_generate_invoice,
                 "items" => $items,
+                "mail" => [
+                    "send" => true
+                ],
                 "payments" => [
                     [
                         "id" => self::$integration_settings->payment,
-                        "value" => $order->get_total()
+                        "value" => wc_format_decimal($order->get_total(), 0)
                     ]
                 ]
             ];
+
+            $documentsTypes = self::$siigo->getDocumentTypes($queries);
+            array_filter($documentsTypes, function ($documentType) use (&$dataInvoice){
+                if($documentType['id'] === (int)self::$integration_settings->document_type){
+                    $dataInvoice['number'] = $documentType['consecutive'];
+                }
+            });
+
             $invoice = self::$siigo->createInvoice($dataInvoice);
             $order->add_order_note( sprintf(__( 'Número de factura Siigo: %s.' ), $invoice['number']));
             $order->add_meta_data('_invoice_number_siigo', $invoice['number']);

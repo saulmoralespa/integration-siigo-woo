@@ -196,7 +196,7 @@ class Integration_Siigo_WC_Plugin
         }
     }
 
-    public function ajax_integration_siigo_sync_products()
+    public function ajax_integration_siigo_sync_products(): void
     {
         if ( ! wp_verify_nonce(  $_REQUEST['nonce'], 'integration_siigo_sync_products' ) )
             return;
