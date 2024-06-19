@@ -110,7 +110,7 @@ class Integration_Siigo_WC_Plugin
         add_action('integration_siigo_wc_smp_schedule', array('Integration_Siigo_WC', 'sync_products'));
         add_action('wp_ajax_integration_siigo_sync_products', array($this, 'ajax_integration_siigo_sync_products'));
         add_action('woocommerce_admin_order_data_after_order_details',  array($this, 'display_custom_editable_field_on_admin_orders') );
-        add_action('woocommerce_process_shop_order_meta', array($this, 'save_order_custom_field_meta'));
+        add_action('woocommerce_process_shop_order_meta', array($this, 'save_order_custom_field_meta'), 10);
 
 
         add_action(
@@ -339,7 +339,7 @@ class Integration_Siigo_WC_Plugin
         update_post_meta( $order_id, $key_field_dni, $dni );
     }
 
-    public function display_custom_editable_field_on_admin_orders( $order ): void
+    public function display_custom_editable_field_on_admin_orders(WC_Order $order ): void
     {
 
         ?>
@@ -348,6 +348,7 @@ class Integration_Siigo_WC_Plugin
             <?php
             woocommerce_wp_select(array(
                 'id' => '_billing_type_document',
+                'value' => get_post_meta($order->get_id(), '_billing_type_document', true),
                 'label' => __('Tipo de documento'),
                 'options' => [
                     'CC' => 'Cédula de ciudadanía',
@@ -358,6 +359,7 @@ class Integration_Siigo_WC_Plugin
 
             woocommerce_wp_text_input( array(
                 'id' => '_billing_dni',
+                'value' => get_post_meta($order->get_id(), '_billing_dni', true),
                 'label' => __('Número de documento:'),
                 'wrapper_class' => 'form-field-wide'
             ) );
@@ -366,12 +368,14 @@ class Integration_Siigo_WC_Plugin
         <?php
     }
 
-    public function save_order_custom_field_meta( $order_id ){
+    public function save_order_custom_field_meta( $order_id ): void
+    {
+
         if ( isset($_POST['_billing_type_document']) ){
-            update_post_meta( $order_id, '_billing_type_document', sanitize_text_field($_POST['_billing_type_document']));
+            update_post_meta($order_id, '_billing_type_document', sanitize_text_field($_POST['_billing_type_document']));
         }
         if ( isset($_POST['_billing_dni']) ){
-            update_post_meta( $order_id, '_billing_dni', sanitize_text_field($_POST['_billing_dni']));
+            update_post_meta($order_id, '_billing_dni', sanitize_text_field($_POST['_billing_dni']));
         }
 
     }

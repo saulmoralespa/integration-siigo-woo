@@ -74,6 +74,7 @@ class Integration_Siigo_WC
                 $product_id = wc_get_product_id_by_sku($product['code']);
                 $price = $product['prices'][0]['price_list'][0]['value'] ?? 0;
                 $sale_price = $product['prices'][0]['price_list'][1]['value'] ?? '';
+                $description = $product['description'] ?? '';
 
                 if($product_id){
                     $wc_product = wc_get_product($product_id);
@@ -81,7 +82,7 @@ class Integration_Siigo_WC
                     $wc_product = new WC_Product();
                 }
                 $wc_product->set_name($product['name']);
-                $wc_product->set_description($product['description']);
+                $wc_product->set_description($description);
                 $wc_product->set_price($price);
                 $wc_product->set_sale_price($sale_price);
                 $wc_product->set_regular_price($price);
