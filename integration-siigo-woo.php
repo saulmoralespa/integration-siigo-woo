@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Integration Siigo Woocommerce
  * Description: Integración del sistama contable y de facturación Siigo para Woocoommerce
- * Version: 0.0.5
+ * Version: 0.0.6
  * Author: Saul Morales Pacheco
  * Author URI: https://saulmoralespa.com
  * License: GNU General Public License v3.0
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if(!defined('INTEGRATION_SIIGO_WC_SMP_VERSION')){
-    define('INTEGRATION_SIIGO_WC_SMP_VERSION', '0.0.5');
+    define('INTEGRATION_SIIGO_WC_SMP_VERSION', '0.0.6');
 }
 
 add_action( 'plugins_loaded', 'integration_siigo_wc_smp_init');

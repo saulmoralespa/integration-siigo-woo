@@ -31,19 +31,22 @@ class Integration_Siigo_WC
     {
         if(isset(self::$integration_settings) && isset(self::$siigo)) return self::$siigo;
 
-        self::$integration_settings = (object)get_option('woocommerce_wc_siigo_integration_settings');
+        self::$integration_settings = get_option('woocommerce_wc_siigo_integration_settings', null);
+
+        if(!isset(self::$integration_settings)) return null;
+
+        self::$integration_settings = (object)self::$integration_settings;
+
+        if(!self::$integration_settings->enabled) return null;
 
         if(self::$integration_settings->environment){
             self::$integration_settings->username = self::$integration_settings->sandbox_username;
             self::$integration_settings->access_key = self::$integration_settings->sandbox_access_key;
         }
 
-        if(self::$integration_settings->username &&
-            self::$integration_settings->access_key){
-            self::$siigo = new Client(self::$integration_settings->username, self::$integration_settings->access_key);
-            $file_token = dirname(__FILE__) . '/token.json';
-            self::$siigo->setTokenFilePath($file_token);
-        }
+        self::$siigo = new Client(self::$integration_settings->username, self::$integration_settings->access_key);
+        $file_token = dirname(__FILE__) . '/token.json';
+        self::$siigo->setTokenFilePath($file_token);
 
         return self::$siigo;
     }
