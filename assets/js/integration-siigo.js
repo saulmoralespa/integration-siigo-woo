@@ -14,7 +14,7 @@
             beforeSend : () => {
                 Swal.fire({
                     title: 'Sincronizando productos',
-                    onBeforeOpen: () => {
+                    didOpen: () => {
                         Swal.showLoading()
                     },
                     allowOutsideClick: false
