@@ -56,14 +56,17 @@ class Integration_Siigo_WC
         if (!self::get_instance()) return;
 
         try {
+
+            $dateTime = new DateTime('now', new DateTimeZone('UTC'));
+
             $queries_created = [
-                "created_start" => wp_date('Y-m-d'),
-                "created_end" => wp_date('Y-m-d\TH:i:s.u\Z')
+                "created_start" => $dateTime->format('Y-m-d'),
+                "created_end" => $dateTime->format('Y-m-d\TH:i:s.u\Z')
             ];
 
             $queries_updated = [
-                "updated_start" => wp_date('Y-m-d'),
-                "updated_end" => wp_date('Y-m-d\TH:i:s.u\Z')
+                "updated_start" => $dateTime->format('Y-m-d'),
+                "updated_end" => $dateTime->format('Y-m-d\TH:i:s.u\Z')
             ];
 
             $response_created = self::get_instance()->getProducts($queries_created);
