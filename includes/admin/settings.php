@@ -117,6 +117,7 @@ return apply_filters('wc_siigo_integration_settings', [
     'account_group' => array(
         'title' => __( 'Clasificación de inventario' ),
         'type' => 'select',
+        'class' => 'wc-enhanced-select',
         'options'  => $groups,
         'default' => '',
         'description' => __( 'Clasificación general de los productos o servicios' ),
@@ -134,6 +135,7 @@ return apply_filters('wc_siigo_integration_settings', [
     'order_status_generate_invoice' => array(
         'title' => __( 'Estado del pedido' ),
         'type' => 'select',
+        'class' => 'wc-enhanced-select',
         'options'  => wc_get_order_statuses(),
         'default' => 'wc-processing',
         'description' => __( 'El estado del pedido en el que se genera la factura' ),
@@ -142,6 +144,7 @@ return apply_filters('wc_siigo_integration_settings', [
     'tax' => array(
         'title' => __( 'Identificador único del impuesto' ),
         'type' => 'select',
+        'class' => 'wc-enhanced-select',
         'options'  => $taxes,
         'default' => '',
         'description' => __( 'El IVA que desea que se muestre en el detalle de la factura. Se recomienda incluir el IVA en los precios de los productos' ),
@@ -150,6 +153,7 @@ return apply_filters('wc_siigo_integration_settings', [
     'document_type' => array(
         'title' => __( 'Identificador del comprobante' ),
         'type' => 'select',
+        'class' => 'wc-enhanced-select',
         'options'  => $document_types,
         'default' => '',
         'description' => __( 'Es el tipo de comprobante utilizado para la generación de la factura' ),
@@ -158,6 +162,7 @@ return apply_filters('wc_siigo_integration_settings', [
     'seller_generate_invoice' => array(
         'title' => __( 'Vendedor' ),
         'type' => 'select',
+        'class'    => 'wc-enhanced-select',
         'options'  => $sellers,
         'default' => '',
         'description' => __( 'Vendedor asociado a la factura' ),
@@ -166,6 +171,7 @@ return apply_filters('wc_siigo_integration_settings', [
     'payment' => array(
         'title' => __( 'Medio de pago' ),
         'type' => 'select',
+        'class'    => 'wc-enhanced-select',
         'options'  => $payments,
         'default' => '',
         'description' => __( 'Medio de pago asociado a la factura' ),
