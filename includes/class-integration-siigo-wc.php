@@ -37,7 +37,7 @@ class Integration_Siigo_WC
 
         self::$integration_settings = (object)self::$integration_settings;
 
-        if(!self::$integration_settings->enabled) return null;
+        if(self::$integration_settings->enabled === 'no') return null;
 
         if(self::$integration_settings->environment){
             self::$integration_settings->username = self::$integration_settings->sandbox_username;
@@ -77,24 +77,28 @@ class Integration_Siigo_WC
             if(empty($products)) return;
 
             foreach ($products as $product){
-                $product_id = wc_get_product_id_by_sku($product['code']);
+                $name = $product['name'];
+                $sku = $product['code'];
                 $price = $product['prices'][0]['price_list'][0]['value'] ?? 0;
                 $sale_price = $product['prices'][0]['price_list'][1]['value'] ?? '';
                 $description = $product['description'] ?? '';
+                $stock_control = $product['stock_control'] ?? false;
+                $available_quantity = $product['available_quantity'] ?? 0;
+                $product_id = wc_get_product_id_by_sku($sku);
 
                 if($product_id){
                     $wc_product = wc_get_product($product_id);
                 }else{
                     $wc_product = new WC_Product();
                 }
-                $wc_product->set_name($product['name']);
+                $wc_product->set_name($name);
                 $wc_product->set_description($description);
                 $wc_product->set_price($price);
                 $wc_product->set_sale_price($sale_price);
                 $wc_product->set_regular_price($price);
-                $wc_product->set_sku($product['code']);
-                $wc_product->set_manage_stock($product['stock_control']);
-                $wc_product->set_stock_quantity($product['available_quantity']);
+                $wc_product->set_sku($sku);
+                $wc_product->set_manage_stock($stock_control);
+                $wc_product->set_stock_quantity($available_quantity);
                 $wc_product->save();
             }
         }catch (Exception $exception){
@@ -366,6 +370,90 @@ class Integration_Siigo_WC
         }
     }
 
+    public static function webhook(WP_REST_Request $request): WP_REST_Response
+    {
+        try {
+            $product = json_decode($request->get_body(), true);
+            $name = $product['name'];
+            $sku = $product['code'];
+            $price = $product['prices'][0]['price_list'][0]['value'] ?? 0;
+            $sale_price = $product['prices'][0]['price_list'][1]['value'] ?? '';
+            $description = $product['description'] ?? '';
+            $stock_control = $product['stock_control'] ?? false;
+            $available_quantity = $product['available_quantity'] ?? 0;
+            $product_id = wc_get_product_id_by_sku($sku);
+
+            if($product_id){
+                $wc_product = wc_get_product($product_id);
+            }else{
+                $wc_product = new WC_Product();
+            }
+
+            $wc_product->set_name($name);
+            $wc_product->set_description($description);
+            $wc_product->set_price($price);
+            $wc_product->set_sale_price($sale_price);
+            $wc_product->set_regular_price($price);
+            $wc_product->set_sku($sku);
+            $wc_product->set_manage_stock($stock_control);
+            $wc_product->set_stock_quantity($available_quantity);
+            $wc_product->save();
+        }catch (Exception $exception) {
+            integration_siigo_wc_smp()->log($exception->getMessage());
+        }
+
+        return new WP_REST_Response();
+    }
+
+    public static function webhook_permissions_check(WP_REST_Request $request): bool
+    {
+        if (!self::get_instance()) return false;
+
+        $body = json_decode($request->get_body(), true);
+
+        return isset($body['username']) && $body['username'] == self::$integration_settings->username;
+    }
+
+    public static function subscribeWebhook(): bool
+    {
+        if (!self::get_instance()) return false;
+
+        $namespace = integration_siigo_wc_smp()->namespace;
+        $endpoint = get_rest_url(null, "/$namespace/webhook");
+
+        try {
+            $webhook_products_create = [
+                "application_id" => "wordpress",
+                "url" => $endpoint,
+                "topic" => "public.siigoapi.products.create",
+            ];
+
+            $webhook_products_update = [
+                "application_id" => "wordpress",
+                "url" => $endpoint,
+                "topic" => "public.siigoapi.products.update",
+            ];
+            $webhook_stock_update = [
+                "application_id" => "wordpress",
+                "url" => $endpoint,
+                "topic" => "public.siigoapi.products.stock.update",
+            ];
+
+            $webhook_create = self::get_instance()->subscribeWebhook($webhook_products_create);
+            self::get_instance()->subscribeWebhook($webhook_products_update);
+            self::get_instance()->subscribeWebhook($webhook_stock_update);
+
+            $settings = get_option('woocommerce_wc_siigo_integration_settings', []);
+            $settings['webhook']['company_key'] = $webhook_create['company_key'];
+            update_option('woocommerce_wc_siigo_integration_settings', $settings);
+        }catch (Exception $exception){
+            integration_siigo_wc_smp()->log($exception->getMessage());
+            return false;
+        }
+
+        return true;
+    }
+
     public static function get_groups(): array
     {
         $groups = [];
@@ -380,7 +468,7 @@ class Integration_Siigo_WC
         return $groups;
     }
 
-    public static function get_taxes()
+    public static function get_taxes(): array
     {
         $taxes = [];
         if (!self::get_instance()) return $taxes;

@@ -86,6 +86,8 @@ class WC_Siigo_Integration extends  WC_Integration
 
         $data = wp_parse_args( $data, $defaults );
 
+        if(!Integration_Siigo_WC::get_instance()) return '';
+
         ob_start();
         ?>
         <tr valign="top">
@@ -96,12 +98,18 @@ class WC_Siigo_Integration extends  WC_Integration
             <td class="forminp">
                 <fieldset>
                     <legend class="screen-reader-text"><span><?php echo wp_kses_post( $data['title'] ); ?></span></legend>
-                    <button class="<?php echo esc_attr( $data['class'] ); ?>" type="button" name="<?php echo esc_attr( $field ); ?>" id="<?php echo esc_attr( $field ); ?>" style="<?php echo esc_attr( $data['css'] ); ?>" <?php echo $this->get_custom_attribute_html( $data ); ?>>Sincronizar ahora</button>
+                    <button class="<?php echo esc_attr( $data['class'] ); ?>" type="button" name="<?php echo esc_attr( $field ); ?>" id="<?php echo esc_attr( $field ); ?>" style="<?php echo esc_attr( $data['css'] ); ?>" <?php echo $this->get_custom_attribute_html( $data ); ?>><?php echo wp_kses_post( $data['text'] ); ?></button>
                     <?php echo $this->get_description_html( $data ); ?>
                 </fieldset>
             </td>
         </tr>
         <?php
         return ob_get_clean();
+    }
+
+    public function get_data_options(string $section, string $method, callable $callback)
+    {
+        $data = isset($_GET['section']) && $_GET['section'] === $section ? $method() : [];
+        return array_reduce($data, $callback, []);
     }
 }

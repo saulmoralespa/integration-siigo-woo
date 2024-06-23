@@ -5,7 +5,7 @@ Tags: commerce, e-commerce, commerce, WordPress ecommerce, store, sales, sell, s
 Requires at least: 6.0
 Tested up to: 6.5.4
 Requires PHP: 8.1
-Stable tag: 0.0.7
+Stable tag: 0.0.8
 License: GNU General Public License v3.0
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
