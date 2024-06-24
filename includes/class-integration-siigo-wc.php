@@ -356,7 +356,7 @@ class Integration_Siigo_WC
 
             $documentsTypes = self::$siigo->getDocumentTypes($queries);
             array_filter($documentsTypes, function ($documentType) use (&$dataInvoice){
-                if($documentType['id'] === (int)self::$integration_settings->document_type){
+                if(!$documentType['automatic_number'] && $documentType['id'] === (int)self::$integration_settings->document_type){
                     $dataInvoice['number'] = $documentType['consecutive'];
                 }
             });
