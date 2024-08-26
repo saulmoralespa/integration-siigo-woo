@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Integration Siigo Woocommerce
  * Description: Integración del sistama contable y de facturación Siigo para Woocoommerce
- * Version: 0.0.9
+ * Version: 0.0.10
  * Author: Saul Morales Pacheco
  * Author URI: https://saulmoralespa.com
  * License: GNU General Public License v3.0
@@ -17,13 +17,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if(!defined('INTEGRATION_SIIGO_WC_SMP_VERSION')){
-    define('INTEGRATION_SIIGO_WC_SMP_VERSION', '0.0.9');
+    define('INTEGRATION_SIIGO_WC_SMP_VERSION', '0.0.10');
 }
 
 add_action( 'plugins_loaded', 'integration_siigo_wc_smp_init');
 
 function integration_siigo_wc_smp_init(): void
 {
+    if(!integration_siigo_wc_sm_requirements()) return;
+
     integration_siigo_wc_smp()->run_siigo();
 }
 
@@ -34,6 +36,23 @@ function integration_siigo_wc_smp_notices($notice): void
         <p><?php echo esc_html( $notice ); ?></p>
     </div>
     <?php
+}
+
+function integration_siigo_wc_sm_requirements(): bool
+{
+    if ( !version_compare(PHP_VERSION, '8.1.0', '>=') ) {
+        if ( is_admin() && ! defined( 'DOING_AJAX' ) ) {
+            add_action(
+                'admin_notices',
+                function() {
+                    integration_siigo_wc_smp_notices( 'Integration Siigo Woocommerce: Requiere la versión de php >= 8.1');
+                }
+            );
+        }
+        return false;
+    }
+
+    return true;
 }
 
 function integration_siigo_wc_smp(){
@@ -47,7 +66,6 @@ function integration_siigo_wc_smp(){
 
 function activate_integration_siigo_wc_smp(): void
 {
-    //use wizard
     if ( ! wp_next_scheduled( 'integration_siigo_wc_smp_schedule'  ) ) {
         $timestamp = strtotime('5am');
         wp_schedule_event($timestamp, 'daily', 'integration_siigo_wc_smp_schedule');

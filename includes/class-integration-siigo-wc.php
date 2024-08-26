@@ -169,6 +169,8 @@ class Integration_Siigo_WC
 
         $order = wc_get_order($order_id);
 
+        if(!apply_filters('wc_siigo_integration_verify_before_generate_invoice', true, $order)) return;
+
         if($order->meta_exists('_invoice_number_siigo')) return;
 
         $field_type_document = 'document/type_document';
