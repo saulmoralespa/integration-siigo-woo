@@ -301,7 +301,7 @@ class Integration_Siigo_WC
                 $tax_total    = $item_taxes['total'][$tax_rate_id];
                 $items[] = [
                     "code" => $product->get_sku(),
-                    "description" => $product->get_name(),
+                    "description" => apply_filters('wc_siigo_integration_description_item', $product->get_name()),
                     "quantity" => $item->get_quantity(),
                     "discount" => wc_format_decimal($item->get_subtotal() - $item->get_total(), 0),
                     "price" => wc_format_decimal($item->get_total() / $item->get_quantity(), 0)
