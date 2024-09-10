@@ -181,13 +181,13 @@ class Integration_Siigo_WC
 
 
         $classic_type_document = get_post_meta( $order_id, '_billing_type_document', true ) ?: get_post_meta( $order_id, '_shipping_type_document', true );
-        $classic_dni = get_post_meta( $order_id, '_billing_dni', true ) ?: get_post_meta( $order_id, '_shipping_dni', true );
+        $classic_dni = get_post_meta( $order_id, self::$integration_settings->dni_field, true ) ?: get_post_meta( $order_id, '_billing_dni', true ) ?: get_post_meta( $order_id, '_shipping_dni', true );
 
         $billing_dni = $checkout_fields->get_field_from_object( $field_dni, $order, 'billing' );
         $shipping_dni = $checkout_fields->get_field_from_object( $field_dni, $order, 'shipping' );
 
         $type_document = $billing_type_document ?: $shipping_type_document ? : $classic_type_document;
-        $dni = self::$integration_settings->dni_field ?: $billing_dni ?: $shipping_dni ?: $classic_dni;
+        $dni = $billing_dni ?: $shipping_dni ?: $classic_dni;
 
         $state = $order->get_billing_state() ?: $order->get_shipping_state();
         $city = $order->get_billing_city() ?: $order->get_shipping_city();
