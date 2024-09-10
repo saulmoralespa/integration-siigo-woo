@@ -229,6 +229,13 @@ return apply_filters('wc_siigo_integration_settings', [
             'default' => '',
             'description' => __( 'Vendedor asociado a la factura' ),
             'desc_tip' => false
+        ),
+        'dni_field' => array(
+            'title' => __( 'Meta clave campo dni' ),
+            'type'  => 'text',
+            'placeholder' => 'dni',
+            'description' => __( 'El campo que hace referencia al documento del cliente' ),
+            'desc_tip' => true
         )
     ]
 ]);
