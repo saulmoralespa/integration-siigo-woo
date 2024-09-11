@@ -230,6 +230,12 @@ return apply_filters('wc_siigo_integration_settings', [
             'description' => __( 'Vendedor asociado a la factura' ),
             'desc_tip' => false
         ),
+        'send_dian' => array(
+            'title' => __('Activar/Desactivar'),
+            'type' => 'checkbox',
+            'label' => __('Enviar facturas a la DIAN'),
+            'default' => 'no'
+        ),
         'dni_field' => array(
             'title' => __( 'Meta clave campo dni' ),
             'type'  => 'text',

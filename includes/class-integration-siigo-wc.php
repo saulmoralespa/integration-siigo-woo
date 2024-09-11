@@ -345,6 +345,9 @@ class Integration_Siigo_WC
                 ],
                 "seller" => self::$integration_settings->seller_generate_invoice,
                 "items" => $items,
+                "stamp" => [
+                    "send" => self::$integration_settings->send_dian === "yes"
+                ],
                 "mail" => [
                     "send" => true
                 ],
