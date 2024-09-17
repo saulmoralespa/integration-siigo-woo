@@ -193,7 +193,11 @@ class Integration_Siigo_WC
         $city = $order->get_billing_city() ?: $order->get_shipping_city();
         $states_dane = include(dirname(__FILE__) . '/states-dane.php');
         $state_code = $states_dane[$state] ?? null;
+        $state_code = apply_filters('wc_siigo_integration_state_code', $state_code);
         $city_code = self::get_code_city($state, $city);
+        $city_code = apply_filters('wc_siigo_integration_city_code', $city_code);
+        $address = $order->get_billing_address_1() ?: $order->get_shipping_address_1();
+        $address = apply_filters('wc_siigo_integration_address', $address);
 
         if(!$state_code) throw new Exception('Departamento no encontrado');
         if(!$city_code) throw new Exception('Ciudad no encontrada');
@@ -230,7 +234,7 @@ class Integration_Siigo_WC
                     ]
                 ],
                 "address" => [
-                    "address" => $order->get_billing_address_1() ?: $order->get_shipping_address_1(),
+                    "address" => $address,
                     "city" => [
                         "country_code" => $order->get_billing_country() ?: $order->get_shipping_country(),
                         "state_code" => $state_code,
