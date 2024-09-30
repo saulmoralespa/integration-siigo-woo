@@ -51,7 +51,7 @@ class Integration_Siigo_WC
         return self::$siigo;
     }
 
-    public static function sync_products(): void
+    public static function sync_products_siigo(): void
     {
         if (!self::get_instance()) return;
 
@@ -104,6 +104,32 @@ class Integration_Siigo_WC
         }catch (Exception $exception){
             integration_siigo_wc_smp()->log($exception->getMessage());
         }
+    }
+
+    public static function sync_products_woo(): void
+    {
+        if (!self::get_instance()) return;
+
+        $products_ids = get_posts( array(
+            'post_type'        => ['product','product_variation'],
+            'numberposts'      => -1,
+            'post_status'      => 'publish',
+            'fields'           => 'ids',
+            'meta_query'       => array(
+                'relation' => 'AND',
+                array(
+                    'key'     => '_sku',
+                    'value'   => '',
+                    'compare' => '!='
+                ),
+                array(
+                    'key'     => '_sync_siigo',
+                    'compare' => 'NOT EXISTS',
+                ),
+            )
+        ));
+
+        self::sync_products_to_siigo($products_ids);
     }
 
     public static function sync_products_to_siigo(array $ids): void

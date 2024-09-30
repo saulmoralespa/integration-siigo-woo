@@ -74,7 +74,7 @@ class WC_Siigo_Integration extends  WC_Integration
     {
         $field    = $this->plugin_id . $this->id . '_' . $key;
         $defaults = array(
-            'class'             => 'button-secondary siigo-sync',
+            'class'             => '',
             'css'               => '',
             'custom_attributes' => [
                 'data-nonce' => wp_create_nonce( 'integration_siigo_sync_products' ),

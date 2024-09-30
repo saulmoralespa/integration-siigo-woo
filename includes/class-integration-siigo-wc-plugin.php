@@ -115,10 +115,12 @@ class Integration_Siigo_WC_Plugin
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts_admin'));
         add_action('woocommerce_order_status_changed', array('Integration_Siigo_WC', 'generate_invoice'), 10, 3);
-        add_action('integration_siigo_wc_smp_schedule', array('Integration_Siigo_WC', 'sync_products'));
+        add_action('integration_siigo_wc_smp_schedule', array('Integration_Siigo_WC', 'sync_products_siigo'));
+        add_action('integration_siigo_wc_smp_schedule_sync_woo_siigo', array('Integration_Siigo_WC', 'sync_products_woo'));
         add_action('wp_ajax_integration_siigo_sync_products', array($this, 'ajax_integration_siigo_sync_products'));
+        add_action('wp_ajax_integration_siigo_sync_woo_siigo', array($this, 'ajax_integration_siigo_sync_woo_siigo'));
         add_action('wp_ajax_integration_siigo_sync_webhook', array($this, 'ajax_integration_siigo_sync_webhook'));
-        add_action('woocommerce_admin_order_data_after_order_details',  array($this, 'display_custom_editable_field_on_admin_orders') );
+        add_action('woocommerce_admin_order_data_after_order_details',  array($this, 'display_custom_editable_field_on_admin_orders'), 10);
         add_action('woocommerce_process_shop_order_meta', array($this, 'save_order_custom_field_meta'), 10);
         add_action('manage_shop_order_posts_custom_column', array($this, 'content_column_invoice'), 10, 2 );
 
@@ -221,7 +223,16 @@ class Integration_Siigo_WC_Plugin
         if ( ! wp_verify_nonce(  $_REQUEST['nonce'], 'integration_siigo_sync_products' ) )
             return;
 
-        Integration_Siigo_WC::sync_products();
+        wp_schedule_single_event(time() + 5, 'integration_siigo_wc_smp_schedule');
+        wp_send_json(['status' => true]);
+    }
+
+    public function ajax_integration_siigo_sync_woo_siigo(): void
+    {
+        if ( ! wp_verify_nonce(  $_REQUEST['nonce'], 'integration_siigo_sync_woo_siigo' ) )
+            return;
+
+        wp_schedule_single_event(time() + 5, 'integration_siigo_wc_smp_schedule_sync_woo_siigo');
         wp_send_json(['status' => true]);
     }
 
@@ -297,25 +308,26 @@ class Integration_Siigo_WC_Plugin
             'label'       => __('Tipo de documento'),
             'placeholder' => _x('', 'placeholder'),
             'required'    => true,
-            'clear'       => false,
+            'clear'       => true,
             'type'        => 'select',
             'default' => 'CC',
             'options'     => array(
                 'CC' => __('Cédula de ciudadanía' ),
                 'NIT' => __('(NIT) Número de indentificación tributaria')
-            )
+            ),
+            'class' => apply_filters('class_field_type_document', array())
         );
 
         $fields['billing']['billing_dni'] = array(
             'label' => __('Número de documento'),
             'placeholder' => _x('', 'placeholder'),
             'required' => true,
-            'clear' => false,
+            'clear' => true,
             'type' => 'number',
             'custom_attributes' => array(
                 'minlength' => 5
             ),
-            'class' => array('my-css')
+            'class' => apply_filters('class_field_dni', array())
         );
 
 
@@ -323,25 +335,26 @@ class Integration_Siigo_WC_Plugin
             'label'       => __('Tipo de documento'),
             'placeholder' => _x('', 'placeholder'),
             'required'    => true,
-            'clear'       => false,
+            'clear'       => true,
             'type'        => 'select',
             'default' => 'CC',
             'options'     => array(
                 'CC' => __('Cédula de ciudadanía' ),
                 'NIT' => __('(NIT) Número de indentificación tributaria')
-            )
+            ),
+            'class' => apply_filters('class_field_type_document', array())
         );
 
         $fields['shipping']['shipping_dni'] = array(
             'label' => __('Número de documento'),
             'placeholder' => _x('', 'placeholder'),
             'required' => true,
-            'clear'    => false,
+            'clear'    => true,
             'type' => 'number',
             'custom_attributes' => array(
                 'minlength' => 5
             ),
-            'class' => array('my-css')
+            'class' => apply_filters('class_field_dni', array())
         );
 
         return $fields;

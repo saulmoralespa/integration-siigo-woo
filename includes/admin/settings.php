@@ -6,7 +6,7 @@ wc_enqueue_js( "
         siigoIntegrationFields: '#woocommerce_wc_siigo_integration_username, #woocommerce_wc_siigo_integration_access_key, #woocommerce_wc_siigo_integration_webhook_button',
         siigoIntegrationSandboxFields: '#woocommerce_wc_siigo_integration_sandbox_username, #woocommerce_wc_siigo_integration_sandbox_access_key',
         webhookButton: '#woocommerce_wc_siigo_integration_webhook_button',
-        syncButton: '#woocommerce_wc_siigo_integration_sync_button',
+        syncButton: '#woocommerce_wc_siigo_integration_sync_siigo_woo',
         webhookButtonHeader: 'h3#woocommerce_wc_siigo_integration_webhook_button',
         productsTitle: 'h3#woocommerce_wc_siigo_integration_products',
         environmentSelector: '#woocommerce_wc_siigo_integration_environment',
@@ -201,11 +201,22 @@ return apply_filters('wc_siigo_integration_settings', [
             'title' => __( 'Productos' ),
             'type'  => 'title'
         ),
-        'sync_button'  => array(
-            'title' => 'Sincronizar productos manualmente',
+        'sync_siigo_woo'  => array(
+            'title' => 'Sincronizar productos Siigo -> WooCommerce',
             'type'  => 'button',
-            'description' => "Sincroniza los productos de Siigo a WooCommerce. <br> <strong>Nota:</strong> Este proceso puede tardar varios minutos.",
+            'class' => 'button-secondary siigo-sync',
+            'description' => "Sincroniza los productos de Siigo a WooCommerce",
             'text' => 'Sincronizar ahora',
+        ),
+        'sync_woo_siigo'  => array(
+            'title' => 'Sincronizar productos WooCommerce -> Siigo',
+            'type'  => 'button',
+            'class' => 'button-secondary siigo-sync-woo-siigo',
+            'description' => "Sincroniza los productos de WooCommerce a Siigo",
+            'text' => 'Sincronizar ahora',
+            'custom_attributes' => [
+                'data-nonce' => wp_create_nonce( 'integration_siigo_sync_woo_siigo' ),
+            ]
         ),
         ...$webhook,
         'invoice' => array(

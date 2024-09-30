@@ -1,23 +1,35 @@
 (function($){
 
-    const buttons = 'button.siigo-sync, button.siigo-sync-webhook';
+    const buttons = 'button.siigo-sync, button.siigo-sync-woo-siigo, button.siigo-sync-webhook';
     const actionSyncProducts = 'integration_siigo_sync_products';
+    const actionSyncProductsWooSiigo = 'integration_siigo_sync_woo_siigo';
     const actionSyncWebhook = 'integration_siigo_sync_webhook';
 
     const messages = {
         [actionSyncProducts]: {
-            title: 'Sincronizando productos',
-            successTitle: 'Productos sincronizados'
+            title: 'Agendando sincronización',
+            successText: 'La sincronización de productos desde Siigo se ha agendado correctamente'
+        },
+        [actionSyncProductsWooSiigo]: {
+            title: 'Agendando sincronización',
+            successText: 'La sincronización de productos hacia Siigo se ha agendado correctamente'
         },
         [actionSyncWebhook]: {
             title: 'Habilitando webhook',
-            successTitle: 'Webhook habilitado'
+            successText: 'Webhook habilitado'
         }
     }
 
     $(buttons).click(function (e) {
         const self = $(this);
-        const action = self.hasClass('siigo-sync') ? actionSyncProducts : actionSyncWebhook;
+
+        let action = actionSyncWebhook
+
+        if(self.hasClass('siigo-sync')){
+            action = actionSyncProducts;
+        } else if (self.hasClass('siigo-sync-woo-siigo')) {
+            action = actionSyncProductsWooSiigo;
+        }
 
         e.preventDefault();
 
@@ -42,7 +54,7 @@
                 if (r.status){
                     Swal.fire({
                         icon: 'success',
-                        title: messages[action].successTitle,
+                        text: messages[action].successText,
                         allowOutsideClick: false,
                         showCloseButton: true,
                         showConfirmButton: false
