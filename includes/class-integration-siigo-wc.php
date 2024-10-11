@@ -164,6 +164,8 @@ class Integration_Siigo_WC
                     ]
                 ];
 
+                sleep(5);
+
                 self::get_instance()->createProduct($dataProduct);
                 update_post_meta($post_id, '_sync_siigo', true);
             }catch (Exception $exception){
