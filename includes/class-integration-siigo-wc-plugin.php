@@ -380,6 +380,7 @@ class Integration_Siigo_WC_Plugin
         $shipping_type_document = sanitize_text_field($_POST['shipping_type_document']);
         $shipping_dni = sanitize_text_field($_POST['shipping_dni']);
         $key_field_dni = $billing_dni ? '_billing_dni' :  '_shipping_dni';
+        $key_field_type_document = $billing_type_document ? '_billing_type_document' :  '_shipping_type_document';
         $type_document = $billing_type_document ?: $shipping_type_document;
         $dni = $billing_dni ?: $shipping_dni;
 
@@ -388,6 +389,7 @@ class Integration_Siigo_WC_Plugin
             $dni = "$dni-$dv";
         }
 
+        update_post_meta( $order_id, $key_field_type_document, $type_document );
         update_post_meta( $order_id, $key_field_dni, $dni );
     }
 
