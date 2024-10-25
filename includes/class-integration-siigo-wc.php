@@ -218,6 +218,7 @@ class Integration_Siigo_WC
         $dni = $billing_dni ?: $shipping_dni ?: $classic_dni;
         $dni = trim($dni);
 
+        $type_document = apply_filters('wc_siigo_integration_type_document', $type_document, $dni);
         $country_code = $order->get_billing_country() ?: $order->get_shipping_country();
         $country_code = apply_filters('wc_siigo_integration_country_code', $country_code);
         $state = $order->get_billing_state() ?: $order->get_shipping_state();
@@ -229,6 +230,9 @@ class Integration_Siigo_WC
         $city_code = apply_filters('wc_siigo_integration_city_code', $city_code);
         $address = $order->get_billing_address_1() ?: $order->get_shipping_address_1();
         $address = apply_filters('wc_siigo_integration_address', $address);
+        $phone = $order->get_billing_phone() ?: $order->get_shipping_phone();
+        $phone = str_replace(' ', '', $phone);
+        $phone = substr($phone, 0,10);
 
         if(!$country_code) throw new Exception('País no encontrado');
         if(!$state_code) throw new Exception('Departamento no encontrado');
@@ -246,7 +250,7 @@ class Integration_Siigo_WC
             $company = $order->get_billing_company() ?: $order->get_shipping_company();
 
             if ($type_document === 'NIT'){
-                $dv_nit = self::calculateDv($dni);
+                $dv_nit = preg_match('/^\d+-\d+$/', $dni) ? $dni : self::calculateDv($dni);
                 $name = $company ?: current($name);
                 $name = [$name];
             }
@@ -277,7 +281,7 @@ class Integration_Siigo_WC
                 "phones" => [
                     [
                         "indicative" => "57",
-                        "number" => $order->get_billing_phone() ?: $order->get_shipping_phone(),
+                        "number" => $phone,
                         "extension" => ""
                     ]
                 ],
@@ -288,7 +292,7 @@ class Integration_Siigo_WC
                         "email" => $order->get_billing_email(),
                         "phone" => [
                             "indicative" => "57",
-                            "number" => $order->get_billing_phone() ?: $order->get_shipping_phone(),
+                            "number" => $phone,
                             "extension" => ""
                         ]
                     ]
