@@ -57,7 +57,7 @@ class WC_Siigo_Integration extends  WC_Integration
     public function validate_password_field($key, $value) :string
     {
         $key_username =  $key === 'sandbox_access_key' ? 'sandbox_username' : 'username';
-        $username = $this->get_option($key_username);
+        $username = $_POST["woocommerce_{$this->id}_{$key_username}"] ?? null;
 
         if($username && $value){
             $status = Integration_Siigo_WC::test_token($username, $value);
