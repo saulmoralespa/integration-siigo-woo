@@ -71,6 +71,7 @@ class Integration_Siigo_WC
 
             $response_created = self::get_instance()->getProducts($queries_created);
             $response_updated = self::get_instance()->getProducts($queries_updated);
+            $min_stock_quantity = self::$integration_settings->min_stock_quantity ?? 0;
 
             $products = array_merge($response_created['results'] ?? [], $response_updated['results'] ?? []);
 
@@ -84,6 +85,7 @@ class Integration_Siigo_WC
                 $description = $product['description'] ?? '';
                 $stock_control = $product['stock_control'] ?? false;
                 $available_quantity = $product['available_quantity'] ?? 0;
+                $available_quantity = $min_stock_quantity > 0 && $min_stock_quantity <= $available_quantity ? $min_stock_quantity: $available_quantity;
                 $product_id = wc_get_product_id_by_sku($sku);
 
                 if($product_id){

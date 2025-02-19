@@ -167,7 +167,7 @@ return apply_filters('wc_siigo_integration_settings', [
             'class' => 'wc-enhanced-select',
             'options'  => $groups,
             'default' => '',
-            'description' => __( 'Clasificación general de los productos o servicios' ),
+            'description' => __( 'Los nuevos productos o servicios que se creen serán agrupados con esta clasificación' ),
             'desc_tip' => false
         ),
         'tax' => array(
@@ -200,6 +200,16 @@ return apply_filters('wc_siigo_integration_settings', [
         'products' => array(
             'title' => __( 'Productos' ),
             'type'  => 'title'
+        ),
+        'min_stock_quantity' => array(
+            'title' => __( 'Cantidad disponible para los productos' ),
+            'type'  => 'number',
+            'default' => 0,
+            'description' => __( 'Cantidad de unidades disponibles para el producto. Si el valor es cero (0) por defecto, se tomará la existencia registrada en Siigo.' ),
+            'desc_tip' => false,
+            'custom_attributes' => [
+                'min' => "0",
+            ]
         ),
         'sync_siigo_woo'  => array(
             'title' => 'Sincronizar productos Siigo -> WooCommerce',

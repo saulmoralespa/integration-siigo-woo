@@ -56,10 +56,12 @@ class WC_Siigo_Integration extends  WC_Integration
 
     public function validate_password_field($key, $value) :string
     {
+        integration_siigo_wc_smp()->log($_POST);
         $key_username =  $key === 'sandbox_access_key' ? 'sandbox_username' : 'username';
         $username = $_POST["woocommerce_{$this->id}_{$key_username}"] ?? null;
+        $enabled = $_POST["woocommerce_{$this->id}_enabled"] ?? false;
 
-        if($username && $value){
+        if($enabled && $username && $value){
             $status = Integration_Siigo_WC::test_token($username, $value);
             if(!$status){
                 WC_Admin_Settings::add_error("Credenciales inválidas");
