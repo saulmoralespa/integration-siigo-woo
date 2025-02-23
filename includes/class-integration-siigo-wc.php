@@ -205,13 +205,14 @@ class Integration_Siigo_WC
 
         $field_type_document = 'document/type_document';
         $field_dni = 'document/dni';
+        $meta_key_dni = self::$integration_settings->dni_field ?: '_billing_dni';
         $checkout_fields = Package::container()->get( CheckoutFields::class );
         $billing_type_document = $checkout_fields->get_field_from_object( $field_type_document, $order, 'billing' );
         $shipping_type_document = $checkout_fields->get_field_from_object( $field_type_document, $order, 'shipping' );
 
 
         $classic_type_document = get_post_meta( $order_id, '_billing_type_document', true ) ?: get_post_meta( $order_id, '_shipping_type_document', true );
-        $classic_dni = get_post_meta( $order_id, self::$integration_settings->dni_field, true ) ?: get_post_meta( $order_id, '_billing_dni', true ) ?: get_post_meta( $order_id, '_shipping_dni', true );
+        $classic_dni = get_post_meta( $order_id, $meta_key_dni, true ) ?: get_post_meta( $order_id, '_shipping_dni', true );
 
         $billing_dni = $checkout_fields->get_field_from_object( $field_dni, $order, 'billing' );
         $shipping_dni = $checkout_fields->get_field_from_object( $field_dni, $order, 'shipping' );
@@ -337,10 +338,12 @@ class Integration_Siigo_WC
                  * @var WC_Product|bool $product
                  */
                 $product = $item->get_product();
+                if(!$product || !$product->get_sku()) continue;
+
                 $item_taxes   = $item->get_taxes();
                 $tax_rate_id  = current( array_keys($item_taxes['subtotal']) );
-                $tax_percent  = $tax_rates[$tax_rate_id];
-                $tax_total    = $item_taxes['total'][$tax_rate_id];
+                $tax_percent  = $tax_rates[$tax_rate_id] ?? 0;
+                $tax_total    = $item_taxes['total'][$tax_rate_id] ?? 0;
                 $items[] = [
                     "code" => $product->get_sku(),
                     "description" => apply_filters('wc_siigo_integration_description_item', $product->get_name()),

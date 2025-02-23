@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Integration Siigo Woocommerce
  * Description: Integración del sistama contable y de facturación Siigo para Woocoommerce
- * Version: 0.1.0
+ * Version: 0.1.1
  * Author: Saul Morales Pacheco
  * Author URI: https://saulmoralespa.com
  * License: GNU General Public License v3.0
  * License URI: http://www.gnu.org/licenses/gpl-3.0.html
  * WC tested up to: 8.9
- * WC requires at least: 8.9
+ * WC requires at least: 9.6
  * Requires Plugins: woocommerce,departamentos-y-ciudades-de-colombia-para-woocommerce
  */
 
