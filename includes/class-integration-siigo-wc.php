@@ -234,8 +234,7 @@ class Integration_Siigo_WC
         $address = $order->get_billing_address_1() ?: $order->get_shipping_address_1();
         $address = apply_filters('wc_siigo_integration_address', $address);
         $phone = $order->get_billing_phone() ?: $order->get_shipping_phone();
-        $phone = str_replace(' ', '', $phone);
-        $phone = substr($phone, 0,10);
+        $phone = self::sanitize_phone_number($phone);
 
         if(!$country_code) throw new Exception('País no encontrado');
         if(!$state_code) throw new Exception('Departamento no encontrado');
@@ -660,5 +659,12 @@ class Integration_Siigo_WC
 
         return ($y > 1) ? 11 - $y : $y;
 
+    }
+
+    public static function sanitize_phone_number(string $phone): string
+    {
+        $phone = preg_replace('/[^0-9]/', '', $phone);
+        $phone = preg_replace('/^57/', '', $phone);
+        return substr($phone, 0,10);
     }
 }
