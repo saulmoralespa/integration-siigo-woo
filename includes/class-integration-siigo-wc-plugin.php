@@ -106,7 +106,7 @@ class Integration_Siigo_WC_Plugin
         add_filter('plugin_action_links_' . plugin_basename($this->file), array($this, 'plugin_action_links'));
         add_filter('bulk_actions-edit-product', array($this, 'sync_bulk_actions'), 20 );
         add_filter('handle_bulk_actions-edit-product', array($this, 'sync_bulk_action_edit_product'), 10, 3);
-        add_filter('manage_edit-shop_order_columns', array($this, 'invoice_column'), 20);
+        add_filter('manage_woocommerce_page_wc-orders_columns', array($this, 'invoice_column'));
         add_filter('woocommerce_checkout_fields', array($this, 'document_woocommerce_fields'));
 
         add_action('woocommerce_checkout_process', array($this, 'very_nit_validation'));
@@ -122,7 +122,7 @@ class Integration_Siigo_WC_Plugin
         add_action('wp_ajax_integration_siigo_sync_webhook', array($this, 'ajax_integration_siigo_sync_webhook'));
         add_action('woocommerce_admin_order_data_after_order_details',  array($this, 'display_custom_editable_field_on_admin_orders'), 10);
         add_action('woocommerce_process_shop_order_meta', array($this, 'save_order_custom_field_meta'), 10);
-        add_action('manage_shop_order_posts_custom_column', array($this, 'content_column_invoice'), 10, 2 );
+        add_action('manage_woocommerce_page_wc-orders_custom_column', array($this, 'content_column_invoice'), 10, 2 );
 
         add_action('rest_api_init', function () {
             register_rest_route($this->namespace, '/webhook', array(
@@ -251,11 +251,9 @@ class Integration_Siigo_WC_Plugin
         return $columns;
     }
 
-    public function content_column_invoice(string $column, $post_id): void
+    public function content_column_invoice(string $column, $order): void
     {
         if ($column !== 'invoice_siigo') return;
-
-        $order = new WC_Order($post_id);
 
         $invoice_number_siigo = $order->get_meta('_invoice_number_siigo');
 
