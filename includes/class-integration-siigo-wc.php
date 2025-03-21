@@ -29,9 +29,11 @@ class Integration_Siigo_WC
 
     public static function get_instance(): ?Client
     {
+        $id = INTEGRATION_SIIGO_WC_SMP_ID;
+
         if(isset(self::$integration_settings) && isset(self::$siigo)) return self::$siigo;
 
-        self::$integration_settings = get_option('woocommerce_wc_siigo_integration_settings', null);
+        self::$integration_settings = get_option("woocommerce_{$id}_settings", null);
 
         if(!isset(self::$integration_settings)) return null;
 
@@ -123,11 +125,7 @@ class Integration_Siigo_WC
                     'key'     => '_sku',
                     'value'   => '',
                     'compare' => '!='
-                ),
-                array(
-                    'key'     => '_sync_siigo',
-                    'compare' => 'NOT EXISTS',
-                ),
+                )
             )
         ));
 
@@ -140,7 +138,7 @@ class Integration_Siigo_WC
 
         foreach ( $ids as $post_id ) {
             $product = wc_get_product($post_id);
-            if(!$product->get_sku() || $product->meta_exists('_sync_siigo') ) continue;
+            if(!$product->get_sku()) continue;
 
             try {
 
@@ -168,8 +166,17 @@ class Integration_Siigo_WC
 
                 sleep(5);
 
-                self::get_instance()->createProduct($dataProduct);
-                update_post_meta($post_id, '_sync_siigo', true);
+                $queries = [
+                    "code" => $product->get_sku()
+                ];
+
+                $productExist = self::get_instance()->getProducts($queries);
+
+                if(empty($productExist['results'])){
+                    self::get_instance()->createProduct($dataProduct);
+                } else {
+                    self::get_instance()->updateProduct($productExist['results'][0]['id'], $dataProduct);
+                }
             }catch (Exception $exception){
                 integration_siigo_wc_smp()->log($exception->getMessage());
             }

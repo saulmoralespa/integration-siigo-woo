@@ -16,13 +16,9 @@ class WC_Siigo_Integration extends  WC_Integration
 
     public function __construct()
     {
-
-        $this->id = 'wc_siigo_integration';
+        $this->id = INTEGRATION_SIIGO_WC_SMP_ID;
         $this->method_title = __( 'Integration Siigo Woocommerce');
         $this->method_description = __( 'Integration Siigo for Woocommerce');
-
-        $this->init_form_fields();
-        $this->init_settings();
 
         $this->debug = $this->get_option( 'debug' );
         $this->isTest = (bool)$this->get_option( 'environment' );
@@ -35,12 +31,38 @@ class WC_Siigo_Integration extends  WC_Integration
             $this->access_key = $this->get_option('access_key');
         }
 
+        $this->init_form_fields();
+        $this->init_settings();
+
+        add_filter( 'woocommerce_settings_api_form_fields_' .  $this->id, array( $this, 'add_additional_settings' ) );
         add_action( 'woocommerce_update_options_integration_' .  $this->id, array( $this, 'process_admin_options' ) );
     }
 
     public function init_form_fields(): void
     {
         $this->form_fields = include(dirname(__FILE__) . '/admin/settings.php');
+    }
+
+    public function add_additional_settings( array $settings ): array
+    {
+        $additional_settings = [];
+
+        if ( empty( $this->settings ) ) {
+            return $settings;
+        }
+
+        $environment = $this->get_option('environment');
+        $sandbox_access_key = $this->get_option('sandbox_access_key');
+        $access_key = $this->get_option('access_key');
+
+        if (($environment == 1 && $sandbox_access_key) ||
+            ($environment == 0 && $access_key)) {
+            $additional_settings = include(dirname(__FILE__) . '/admin/other_settings.php');
+        }
+
+        $settings = array_merge($settings, $additional_settings);
+
+        return apply_filters('wc_siigo_integration_settings', $settings);
     }
 
     public function admin_options(): void
@@ -56,7 +78,6 @@ class WC_Siigo_Integration extends  WC_Integration
 
     public function validate_password_field($key, $value) :string
     {
-        integration_siigo_wc_smp()->log($_POST);
         $key_username =  $key === 'sandbox_access_key' ? 'sandbox_username' : 'username';
         $username = $_POST["woocommerce_{$this->id}_{$key_username}"] ?? null;
         $enabled = $_POST["woocommerce_{$this->id}_enabled"] ?? false;
