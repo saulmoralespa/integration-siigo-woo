@@ -78,6 +78,24 @@ class Client
     /**
      * @throws GuzzleException
      */
+    public function updateProduct(string $id, array $data): array
+    {
+        return $this->makeRequest("PUT", self::API_VERSION . "/products/$id", [
+            "json" => $data
+        ]);
+    }
+
+    /**
+     * @throws GuzzleException
+     */
+    public function deleteProduct(string $id): array
+    {
+        return $this->makeRequest("DELETE", self::API_VERSION . "/products/$id");
+    }
+
+    /**
+     * @throws GuzzleException
+     */
     public function createClient(array $data): array
     {
         return $this->makeRequest("POST", self::API_VERSION . "/customers", [
@@ -284,8 +302,6 @@ class Client
                 ];
             }
 
-            $options = array_merge($options);
-
             $res = $this->client()->request($method, $uri, $options);
             $content =  $res->getBody()->getContents();
             return self::responseArray($content);
@@ -335,7 +351,7 @@ class Client
         if (json_last_error() !== JSON_ERROR_NONE) {
             throw new  \Exception("Failed to decode token data: " . json_last_error_msg());
         }
-        return $tokenData['expires_at'] < time();
+        return $tokenData['expires_at'] <= time();
     }
 
     /**
@@ -343,7 +359,7 @@ class Client
      */
     private static function saveToken(array $accessToken): void
     {
-        $accessToken['expires_at'] = time() + 86400;// 24 hours
+        $accessToken['expires_at'] = time() + 86400; //24 hours
         if (file_put_contents(self::$tokenFilePath, json_encode($accessToken)) === false) {
             throw new \Exception("Failed to write token data to file.");
         }
