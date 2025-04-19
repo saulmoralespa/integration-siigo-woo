@@ -87,8 +87,14 @@ class Integration_Siigo_WC
                 $description = $product['description'] ?? '';
                 $stock_control = $product['stock_control'] ?? false;
                 $available_quantity = $product['available_quantity'] ?? 0;
+                $warehouse = $product['warehouses'][0]['id'] ?? null;
                 $available_quantity = $min_stock_quantity > 0 && $min_stock_quantity <= $available_quantity ? $min_stock_quantity: $available_quantity;
                 $product_id = wc_get_product_id_by_sku($sku);
+
+                if(!empty(self::$integration_settings->warehouse) &&
+                    (int)self::$integration_settings->warehouse !== $warehouse) {
+                    continue;
+                }
 
                 if($product_id){
                     $wc_product = wc_get_product($product_id);
@@ -428,6 +434,8 @@ class Integration_Siigo_WC
 
     public static function webhook(WP_REST_Request $request): WP_REST_Response
     {
+        if (!self::get_instance()) return new WP_REST_Response;
+
         try {
             $product = json_decode($request->get_body(), true);
             $name = $product['name'];
@@ -437,7 +445,13 @@ class Integration_Siigo_WC
             $description = $product['description'] ?? '';
             $stock_control = $product['stock_control'] ?? false;
             $available_quantity = $product['available_quantity'] ?? 0;
+            $warehouse = $product['warehouses'][0]['id'] ?? null;
             $product_id = wc_get_product_id_by_sku($sku);
+
+            if(!empty(self::$integration_settings->warehouse) &&
+                (int)self::$integration_settings->warehouse !== $warehouse) {
+                return new WP_REST_Response();
+            }
 
             if($product_id){
                 $wc_product = wc_get_product($product_id);
@@ -483,7 +497,6 @@ class Integration_Siigo_WC
                 "url" => $endpoint,
                 "topic" => "public.siigoapi.products.create",
             ];
-
             $webhook_products_update = [
                 "application_id" => "wordpress",
                 "url" => $endpoint,
@@ -584,6 +597,20 @@ class Integration_Siigo_WC
         }
 
         return $payments;
+    }
+
+    public static function get_warehouses(): array
+    {
+        $warehouses = [];
+        if (!self::get_instance()) return $warehouses;
+
+        try {
+            $warehouses = self::$siigo->getWarehouses();
+        } catch (Exception $exception) {
+            integration_siigo_wc_smp()->log($exception->getMessage());
+        }
+
+        return $warehouses;
     }
 
     public static function get_code_city($state, $city, $country = 'CO'): bool|string

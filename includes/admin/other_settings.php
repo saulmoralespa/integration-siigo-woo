@@ -26,6 +26,12 @@ $payments = $this->get_data_options('wc_siigo_integration', 'Integration_Siigo_W
     return $new_payment;
 });
 
+$warehouses = $this->get_data_options('wc_siigo_integration', 'Integration_Siigo_WC::get_warehouses', function($new_warehouse, $warehouse){
+    if(!$warehouse["active"]) return $new_warehouse;
+    $new_warehouse[$warehouse["id"]] = "{$warehouse["name"]}";
+    return $new_warehouse;
+});
+
 $config = get_option('woocommerce_wc_siigo_integration_settings', []);
 
 if(isset($config['webhook']['company_key'])){
@@ -104,6 +110,15 @@ return [
         'custom_attributes' => [
             'min' => "0",
         ]
+    ),
+    'warehouse' => array(
+        'title' => __( 'Bodega' ),
+        'type' => 'select',
+        'class'    => 'wc-enhanced-select',
+        'options'  => $warehouses,
+        'default' => '',
+        'description' => __( 'Bodega asociada a los productos' ),
+        'desc_tip' => false
     ),
     'sync_siigo_woo'  => array(
         'title' => 'Sincronizar productos Siigo -> WooCommerce',
