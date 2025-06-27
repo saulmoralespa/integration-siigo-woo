@@ -107,10 +107,10 @@ class Integration_Siigo_WC_Plugin
         add_filter('bulk_actions-edit-product', array($this, 'sync_bulk_actions'), 20 );
         add_filter('handle_bulk_actions-edit-product', array($this, 'sync_bulk_action_edit_product'), 10, 3);
         add_filter('manage_woocommerce_page_wc-orders_columns', array($this, 'invoice_column'));
-        add_filter('woocommerce_checkout_fields', array($this, 'document_woocommerce_fields'));
+        add_filter('woocommerce_default_address_fields', array($this, 'document_woocommerce_fields'));
+        add_action('woocommerce_checkout_update_order_meta', array($this, 'document_woocommerce_fields_update_order_meta'));
 
         add_action('woocommerce_checkout_process', array($this, 'very_nit_validation'));
-        add_action('woocommerce_checkout_update_order_meta', array($this, 'custom_checkout_fields_update_order_meta'));
         add_action('woocommerce_init', array($this, 'register_additional_checkout_fields'));
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts_admin'));
@@ -302,7 +302,7 @@ class Integration_Siigo_WC_Plugin
 
     public function document_woocommerce_fields(array $fields): array
     {
-        $fields['billing']['billing_type_document'] = array(
+        $fields['type_document'] = array(
             'label'       => __('Tipo de documento'),
             'placeholder' => _x('', 'placeholder'),
             'required'    => true,
@@ -316,7 +316,7 @@ class Integration_Siigo_WC_Plugin
             'class' => apply_filters('class_field_type_document', array())
         );
 
-        $fields['billing']['billing_dni'] = array(
+        $fields['dni'] = array(
             'label' => __('Número de documento'),
             'placeholder' => _x('', 'placeholder'),
             'required' => true,
@@ -328,34 +328,35 @@ class Integration_Siigo_WC_Plugin
             'class' => apply_filters('class_field_dni', array())
         );
 
-
-        $fields['shipping']['shipping_type_document'] = array(
-            'label'       => __('Tipo de documento'),
-            'placeholder' => _x('', 'placeholder'),
-            'required'    => true,
-            'clear'       => true,
-            'type'        => 'select',
-            'default' => 'CC',
-            'options'     => array(
-                'CC' => __('Cédula de ciudadanía' ),
-                'NIT' => __('(NIT) Número de indentificación tributaria')
-            ),
-            'class' => apply_filters('class_field_type_document', array())
-        );
-
-        $fields['shipping']['shipping_dni'] = array(
-            'label' => __('Número de documento'),
-            'placeholder' => _x('', 'placeholder'),
-            'required' => true,
-            'clear'    => true,
-            'type' => 'number',
-            'custom_attributes' => array(
-                'minlength' => 5
-            ),
-            'class' => apply_filters('class_field_dni', array())
-        );
-
         return $fields;
+    }
+
+    public function document_woocommerce_fields_update_order_meta($order_id): void
+    {
+        $this->updated_address('billing', $order_id);
+
+        if(!empty($_POST['ship_to_different_address'])) {
+            $this->updated_address('shipping', $order_id);
+        }
+    }
+
+    private function updated_address(string $prefix, $order_id): void
+    {
+        if (!empty($_POST[ "{$prefix}_type_document" ])) {
+            $type_document = sanitize_text_field($_POST[ "{$prefix}_type_document" ]);
+            update_post_meta($order_id, "_{$prefix}_type_document", $type_document);
+        }
+
+        if (!empty($_POST[ "{$prefix}_dni" ])) {
+            $dni = sanitize_text_field($_POST[ "{$prefix}_dni" ]);
+            update_post_meta($order_id, "_{$prefix}_dni", $dni);
+        }
+
+        if(isset($dni) && isset($type_document) && $type_document === 'NIT'){
+            $dv = Integration_Siigo_WC::calculateDv($dni);
+            $dni = "$dni-$dv";
+            update_post_meta($order_id, "_{$prefix}_dni", $dni);
+        }
     }
 
     public function very_nit_validation(): void
@@ -369,26 +370,6 @@ class Integration_Siigo_WC_Plugin
             ($shipping_type_document === 'NIT' && $shipping_dni && strlen($shipping_dni) !== 9)){
             wc_add_notice( __( '<p>Ingrese un NIT válido sin el DV</p>' ), 'error' );
         }
-    }
-
-    public function custom_checkout_fields_update_order_meta($order_id): void
-    {
-        $billing_type_document = sanitize_text_field($_POST['billing_type_document']);
-        $billing_dni = sanitize_text_field($_POST['billing_dni']);
-        $shipping_type_document = sanitize_text_field($_POST['shipping_type_document']);
-        $shipping_dni = sanitize_text_field($_POST['shipping_dni']);
-        $key_field_dni = $billing_dni ? '_billing_dni' :  '_shipping_dni';
-        $key_field_type_document = $billing_type_document ? '_billing_type_document' :  '_shipping_type_document';
-        $type_document = $billing_type_document ?: $shipping_type_document;
-        $dni = $billing_dni ?: $shipping_dni;
-
-        if($type_document === 'NIT'){
-            $dv = Integration_Siigo_WC::calculateDv($dni);
-            $dni = "$dni-$dv";
-        }
-
-        update_post_meta( $order_id, $key_field_type_document, $type_document );
-        update_post_meta( $order_id, $key_field_dni, $dni );
     }
 
     public function display_custom_editable_field_on_admin_orders(WC_Order $order ): void
@@ -429,6 +410,5 @@ class Integration_Siigo_WC_Plugin
         if ( isset($_POST['_billing_dni']) ){
             update_post_meta($order_id, '_billing_dni', sanitize_text_field($_POST['_billing_dni']));
         }
-
     }
 }
