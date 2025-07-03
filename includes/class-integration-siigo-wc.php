@@ -257,18 +257,21 @@ class Integration_Siigo_WC
 
             $dv_nit = 0;
 
-            $name = [
+            $name_parts = [
                 $order->get_billing_first_name() ?: $order->get_shipping_first_name(),
                 $order->get_billing_last_name() ?: $order->get_shipping_last_name()
             ];
 
+            $name_parts = array_filter($name_parts);
+
             $company = $order->get_billing_company() ?: $order->get_shipping_company();
 
             if ($type_document === 'NIT'){
-                $dv_nit = preg_match('/^\d+-\d+$/', $dni) ? $dni : self::calculateDv($dni);
-                $name = $company ?: current($name);
-                $name = [$name];
+                list($dni, $dv_nit) = self::handle_dni($dni);
+                $name_parts = [$company ?: reset($name_parts)];
             }
+
+            $name = $name_parts;
 
             $dataClient = [
                 "type" => "Customer", //Customer, Supplier, Other
@@ -700,5 +703,22 @@ class Integration_Siigo_WC
         $phone = preg_replace('/[^0-9]/', '', $phone);
         $phone = preg_replace('/^57/', '', $phone);
         return substr($phone, 0,10);
+    }
+
+    private static function handle_dni(string $dni): array
+    {
+        if (preg_match('/^(.+)-(\d+)$/', $dni, $matches)) {
+            return [
+                $matches[1],
+                $matches[2]
+            ];
+        }
+
+        $dv_nit = self::calculateDv($dni);
+
+        return [
+            $dni,
+            $dv_nit
+        ];
     }
 }
