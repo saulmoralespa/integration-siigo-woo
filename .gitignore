@@ -1,0 +1,5 @@
+/vendor/
+/wordpress/
+/node_modules
+.env
+.phpunit.result.cache

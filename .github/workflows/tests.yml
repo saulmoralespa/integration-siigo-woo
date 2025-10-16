@@ -1,0 +1,52 @@
+name: Run Plugin Tests
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: "#dgs45As"
+          MYSQL_DATABASE: wp_test
+          MYSQL_USER: wp_test
+          MYSQL_PASSWORD: "#dgs45As"
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping --silent" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, dom, curl
+          tools: composer, phpunit
+
+      - name: Install dependencies
+        run: |
+          composer install --no-interaction --prefer-dist
+
+      - name: Set environment variables
+        run: |
+          echo "WP_TEST__DIR=$(pwd)" >> $GITHUB_ENV    
+
+      - name: Download and Extract WooCommerce
+        run: |
+          curl -o woocommerce.zip https://downloads.wordpress.org/plugin/woocommerce.10.2.2.zip
+          unzip woocommerce.zip
+          mv woocommerce ..
+
+      - name: Run tests
+        run: vendor/bin/phpunit --testdox
