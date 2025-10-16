@@ -1,5 +1,9 @@
 <?php
 
+if (!defined('ABSPATH')) {
+    exit; // Exit if accessed directly.
+}
+
 use Saulmoralespa\Siigo\Client;
 use Automattic\WooCommerce\Blocks\Package;
 use Automattic\WooCommerce\Blocks\Domain\Services\CheckoutFields;
@@ -90,6 +94,8 @@ class Integration_Siigo_WC
                 $warehouse = $product['warehouses'][0]['id'] ?? null;
                 $available_quantity = $min_stock_quantity > 0 && $min_stock_quantity <= $available_quantity ? $min_stock_quantity: $available_quantity;
                 $product_id = wc_get_product_id_by_sku($sku);
+
+                if(!trim($name)) continue;
 
                 if(!empty(self::$integration_settings->warehouse) &&
                     (int)self::$integration_settings->warehouse !== $warehouse) {
@@ -189,15 +195,20 @@ class Integration_Siigo_WC
         }
     }
 
-    public static function create_shipping_product(): void
+    public static function create_product($sku, $name): void
     {
         if (!self::get_instance()) return;
 
         try {
+            $queries = [
+                "code" => $sku,
+            ];
+            $products = self::$siigo->getProducts($queries);
+            if(!empty($products['results'])) return;
             if(!self::$integration_settings->account_group) throw new Exception('Clasificación de inventario no configurado');
             $dataProduct = [
-                "code" => self::SKU_SHIPPING,
-                "name" => 'Envío',
+                "code" => $sku,
+                "name" => $name,
                 "account_group" => self::$integration_settings->account_group
             ];
             self::get_instance()->createProduct($dataProduct);
@@ -331,15 +342,7 @@ class Integration_Siigo_WC
                 self::$siigo->createClient($dataClient);
             }
 
-            $queries = [
-                "code" => self::SKU_SHIPPING,
-            ];
-
-            $products = self::$siigo->getProducts($queries);
-
-            if(empty($products['results'])){
-                self::create_shipping_product();
-            }
+            self::create_product(self::SKU_SHIPPING, "Envío");
 
             $items = [];
             $tax_rates = [];
@@ -347,6 +350,16 @@ class Integration_Siigo_WC
             foreach ( $order->get_items('tax') as $item ) {
                 $tax_rates[$item->get_rate_id()] = $item->get_rate_percent();
             }
+
+            $queries = [
+                "type" => "FV"
+            ];
+
+            $documentsTypes = self::$siigo->getDocumentTypes($queries);
+            $document = array_filter($documentsTypes, function ($documentType) {
+                return $documentType['id'] === (int)self::$integration_settings->document_type;
+            });
+            $document = array_pop($document);
 
             foreach ($order->get_items() as $item){
                 /**
@@ -359,11 +372,14 @@ class Integration_Siigo_WC
                 $tax_rate_id  = current( array_keys($item_taxes['subtotal']) );
                 $tax_percent  = $tax_rates[$tax_rate_id] ?? 0;
                 $tax_total    = $item_taxes['total'][$tax_rate_id] ?? 0;
+                $discount = $document['discount_type'] === 'Value'
+                    ? wc_format_decimal($item->get_subtotal() - $item->get_total(), 0)
+                    : round(($item->get_subtotal() - $item->get_total()) / $item->get_subtotal() * 100);
                 $items[] = [
                     "code" => $product->get_sku(),
                     "description" => apply_filters('wc_siigo_integration_description_item', $product->get_name()),
                     "quantity" => $item->get_quantity(),
-                    "discount" => wc_format_decimal($item->get_subtotal() - $item->get_total(), 0),
+                    "discount" => $discount,
                     "price" => wc_format_decimal($item->get_total() / $item->get_quantity(), 0)
                 ];
 
@@ -377,22 +393,20 @@ class Integration_Siigo_WC
                 }
             }
 
-            if($order->get_shipping_total()){
+            $shipping_total = wc_format_decimal((float)$order->get_shipping_total() + (float)$order->get_shipping_tax());
+
+            if($shipping_total > 0){
                 $items[] = [
                     "code" => self::SKU_SHIPPING,
                     "description" => 'Envío',
                     "quantity" => 1,
-                    "price" => wc_format_decimal($order->get_shipping_total(), 0)
+                    "price" => $shipping_total
                 ];
             }
 
             if(!self::$integration_settings->document_type) throw new Exception('Tipo de documento no configurado');
             if(!self::$integration_settings->seller_generate_invoice) throw new Exception('Vendedor no configurado');
             if(!self::$integration_settings->payment) throw new Exception('Método de pago no configurado');
-
-            $queries = [
-                "type" => "FV"
-            ];
 
             $dataInvoice = [
                 "document" => [
@@ -419,12 +433,9 @@ class Integration_Siigo_WC
                 ]
             ];
 
-            $documentsTypes = self::$siigo->getDocumentTypes($queries);
-            array_filter($documentsTypes, function ($documentType) use (&$dataInvoice){
-                if(!$documentType['automatic_number'] && $documentType['id'] === (int)self::$integration_settings->document_type){
-                    $dataInvoice['number'] = $documentType['consecutive'];
-                }
-            });
+            if(!$document['automatic_number']){
+                $dataInvoice['number'] = $document['consecutive'];
+            }
 
             $invoice = self::$siigo->createInvoice($dataInvoice);
             $order->add_order_note( sprintf(__( 'Número de factura Siigo: %s.' ), $invoice['number']));
@@ -664,7 +675,7 @@ class Integration_Siigo_WC
         return $cities;
     }
 
-    public static function calculateDv($nit): int
+    public static function calculate_dv($nit): int
     {
         $vpri = array(16);
         $z = strlen($nit);
@@ -714,7 +725,7 @@ class Integration_Siigo_WC
             ];
         }
 
-        $dv_nit = self::calculateDv($dni);
+        $dv_nit = self::calculate_dv($dni);
 
         return [
             $dni,
