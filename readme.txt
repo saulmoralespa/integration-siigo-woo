@@ -162,7 +162,8 @@ El plugin registrará el error en los logs de WooCommerce. Puedes revisar los lo
 == Upgrade Notice ==
 
 = 0.2.0 =
-Esta versión incluye compatibilidad con las últimas versiones de WordPress y WooCommerce, además de mejoras importantes en rendimiento y estabilidad.
+* Solución a producto que sea crea al no tener nombre
+* Validar  y aplicar el tipo de descuento según el documento
 
 == Additional Info ==
 
