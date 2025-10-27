@@ -84,7 +84,7 @@ class Integration_Siigo_WC
             if(empty($products)) return;
 
             foreach ($products as $product){
-                $name = $product['name'];
+                $name = $product['name'] ?? '';
                 $sku = $product['code'];
                 $price = $product['prices'][0]['price_list'][0]['value'] ?? 0;
                 $sale_price = $product['prices'][0]['price_list'][1]['value'] ?? '';
@@ -95,7 +95,7 @@ class Integration_Siigo_WC
                 $available_quantity = $min_stock_quantity > 0 && $min_stock_quantity <= $available_quantity ? $min_stock_quantity: $available_quantity;
                 $product_id = wc_get_product_id_by_sku($sku);
 
-                if(!trim($name)) continue;
+                if(!$sku || !trim($name)) continue;
 
                 if(!empty(self::$integration_settings->warehouse) &&
                     (int)self::$integration_settings->warehouse !== $warehouse) {
@@ -161,7 +161,7 @@ class Integration_Siigo_WC
                     "name" => $product->get_name(),
                     "account_group" => self::$integration_settings->account_group,
                     "type" => $product->is_virtual() || $product->is_downloadable() ? 'Service' : 'Product', //Product, Service, ConsumerGood
-                    "description" => $product->get_description(),
+                    "description" => substr($product->get_description(), 0, 500),
                     "stock_control" => $product->managing_stock(),
                     "prices" => [
                         [
@@ -408,6 +408,11 @@ class Integration_Siigo_WC
             if(!self::$integration_settings->seller_generate_invoice) throw new Exception('Vendedor no configurado');
             if(!self::$integration_settings->payment) throw new Exception('Método de pago no configurado');
 
+            $payments = self::get_payments();
+            $payment = array_filter($payments, function ($payment) {
+                return $payment['id'] === self::$integration_settings->payment;
+            });
+
             $dataInvoice = [
                 "document" => [
                     "id" => (int)self::$integration_settings->document_type,
@@ -432,6 +437,10 @@ class Integration_Siigo_WC
                     ]
                 ]
             ];
+
+            if(isset($payment['due_date']) && $payment['due_date']){
+                $dataInvoice['payments'][0]['due_date'] = wp_date('Y-m-d');
+            }
 
             if(!$document['automatic_number']){
                 $dataInvoice['number'] = $document['consecutive'];

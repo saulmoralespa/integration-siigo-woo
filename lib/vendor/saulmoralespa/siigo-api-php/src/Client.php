@@ -359,7 +359,7 @@ class Client
      */
     private static function saveToken(array $accessToken): void
     {
-        $accessToken['expires_at'] = time() + (86400 / 2);
+        $accessToken['expires_at'] = time() + (3600 * 6);
         if (file_put_contents(self::$tokenFilePath, json_encode($accessToken)) === false) {
             throw new \Exception("Failed to write token data to file.");
         }

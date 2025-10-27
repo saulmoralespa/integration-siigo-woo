@@ -7,21 +7,25 @@ $groups = $this->get_data_options('wc_siigo_integration', 'Integration_Siigo_WC:
 });
 
 $taxes = $this->get_data_options('wc_siigo_integration', 'Integration_Siigo_WC::get_taxes', function($new_tax, $tax){
+    if(!$tax["active"]) return $new_tax;
     $new_tax[$tax["id"]] = "{$tax["name"]}";
     return $new_tax;
 });
 
 $document_types = $this->get_data_options('wc_siigo_integration', 'Integration_Siigo_WC::get_document_types', function($new_document_type, $document_type){
+    if(!$document_type['active']) return $new_document_type;
     $new_document_type[$document_type["id"]] = "{$document_type["type"]} - {$document_type["code"]} - {$document_type["description"]}";
     return $new_document_type;
 });
 
 $sellers = $this->get_data_options('wc_siigo_integration', 'Integration_Siigo_WC::get_sellers', function($new_seller, $seller){
+    if(!$seller["active"]) return $new_seller;
     $new_seller[$seller["id"]] = "{$seller["username"]} - {$seller["first_name"]} {$seller["last_name"]}";
     return $new_seller;
 });
 
 $payments = $this->get_data_options('wc_siigo_integration', 'Integration_Siigo_WC::get_payments', function($new_payment, $payment){
+    if(!$payment["active"]) return $new_payment;
     $new_payment[$payment["id"]] = "{$payment["name"]}";
     return $new_payment;
 });

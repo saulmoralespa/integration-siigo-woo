@@ -3,3 +3,4 @@
 /node_modules
 .env
 .phpunit.result.cache
+/includes/token.json

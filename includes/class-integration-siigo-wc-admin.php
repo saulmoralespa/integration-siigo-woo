@@ -23,7 +23,8 @@ class Integration_Siigo_WC_Admin
                 ),
                 'environment' => array(
                     'type' => 'integer',
-                    'enum' => array(0, 1)
+                    'enum' => array(0, 1),
+                    'sanitize_callback' => 'intval'
                 ),
                 'username' => array(
                     'type' => 'string'
@@ -51,6 +52,12 @@ class Integration_Siigo_WC_Admin
                 ),
                 'min_stock_quantity' => array(
                     'type' => 'integer'
+                ),
+                'warehouse' => array(
+                  'type' => 'string'
+                ),
+                'order_status_generate_invoice' => array(
+                    'type' => 'string'
                 ),
                 'seller_generate_invoice' => array(
                     'type' => 'string'
@@ -85,6 +92,8 @@ class Integration_Siigo_WC_Admin
                     'document_type' => '',
                     'payment' => '',
                     'min_stock_quantity' => 0,
+                    'warehouse' => '',
+                    'order_status_generate_invoice' => 'wc-processing',
                     'seller_generate_invoice' => '',
                     'send_dian' => 'no',
                     'dni_field' => '',

@@ -93,6 +93,9 @@ class Integration_Siigo_WC_Plugin
             require_once($this->includes_path . 'class-integration-siigo-wc.php');
         }
 
+        require_once($this->includes_path . 'class-integration-siigo-wc-admin.php');
+        (new Integration_Siigo_WC_Admin());
+
         require_once ($this->lib_path . 'plugin-update-checker/plugin-update-checker.php');
 
         $myUpdateChecker = YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
@@ -212,6 +215,34 @@ class Integration_Siigo_WC_Plugin
 
     public function enqueue_scripts_admin($hook): void
     {
+        if($hook === 'woocommerce_page_wizard-siigo' ){
+            $asset_file = $this->plugin_path . 'assets/build/index.asset.php';
+
+            if ( ! file_exists( $asset_file ) ) {
+                return;
+            }
+
+            $asset = include $asset_file;
+
+            wp_enqueue_style(
+                    'integration-siigo-wizard',
+                    $this->assets . 'build/index.css',
+                    array(),
+                    $asset['version']
+            );
+
+            wp_enqueue_script(
+                'integration-siigo-wizard',
+                $this->assets . 'build/index.js',
+                $asset['dependencies'],
+                $asset['version'],
+                array(
+                    'in_footer' => true
+                )
+            );
+        }
+
+
         if($hook === 'woocommerce_page_wc-settings' && isset($_GET['section']) && $_GET['section'] === 'wc_siigo_integration'){
             wp_enqueue_script( 'integration-siigo-sweet-alert', $this->assets. 'js/sweetalert2.min.js', array( 'jquery' ), $this->version, true );
             wp_enqueue_script( 'integration-siigo', $this->assets. 'js/integration-siigo.js', array( 'jquery' ), $this->version, true );

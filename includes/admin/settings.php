@@ -46,10 +46,17 @@ wc_enqueue_js( "
 });
 ");
 
+$docs_url = '<a href="https://shop.saulmoralespa.com/integration-siigo-woocommerce/" target="_blank" style="text-decoration: none;">
+            📘 Ver documentación completa del plugin
+        </a>';
 $docs = "<p><a target='_blank' href='https://siigonube.siigo.com/#/api-credentials/'>Credenciales Siigo API</a></p>";
-$sync_products = "<p><a target='_blank' href='https://siigonube.siigo.com/#/api-products/'>Sincronizar productos</a></p>";
 
 return [
+    'docs' => array(
+        'title' => '',
+        'type' => 'title',
+        'description' => $docs_url
+    ),
     'enabled' => array(
         'title' => __('Activar/Desactivar'),
         'type' => 'checkbox',
@@ -85,24 +92,24 @@ return [
         'title' => __( 'username' ),
         'type'  => 'email',
         'description' => __( 'username para el entorno de producción' ),
-        'desc_tip' => true
+        'desc_tip' => false
     ),
     'access_key' => array(
         'title' => __( 'access_key' ),
         'type'  => 'password',
         'description' => __( 'access_key para el entorno de producción' ),
-        'desc_tip' => true
+        'desc_tip' => false
     ),
     'sandbox_username' => array(
         'title' => __( 'username' ),
         'type'  => 'email',
         'description' => __( 'username para el entorno de pruebas' ),
-        'desc_tip' => true
+        'desc_tip' => false
     ),
     'sandbox_access_key' => array(
         'title' => __( 'access_key' ),
         'type'  => 'password',
         'description' => __( 'access_key para el entorno de pruebas' ),
-        'desc_tip' => true
+        'desc_tip' => false
     )
 ];
