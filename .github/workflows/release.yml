@@ -1,0 +1,158 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get tag version
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          VERSION=${VERSION#v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Creating release for version: $VERSION"
+
+      - name: Validate version format
+        run: |
+          VERSION=${{ steps.get_version.outputs.VERSION }}
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Error: Tag version must follow semantic versioning (e.g., 0.3.2)"
+            exit 1
+          fi
+          echo "✅ Version format is valid: $VERSION"
+
+      - name: Create release directory
+        run: |
+          mkdir -p release/integration-siigo-woo
+          echo "✅ Release directory created"
+
+      - name: Copy plugin files
+        run: |
+          echo "📦 Copying plugin files..."
+          
+          # Copiar archivos y directorios principales
+          cp -r assets release/integration-siigo-woo/
+          cp -r includes release/integration-siigo-woo/
+          cp -r lib release/integration-siigo-woo/
+          
+          # Copiar vendor solo si existe
+          if [ -d vendor ]; then
+            cp -r vendor release/integration-siigo-woo/
+          fi
+          
+          # Copiar archivos raíz
+          cp integration-siigo-woo.php release/integration-siigo-woo/
+          cp readme.txt release/integration-siigo-woo/
+          cp LICENSE release/integration-siigo-woo/
+          
+          echo "✅ Files copied successfully"
+
+      - name: Verify plugin structure
+        run: |
+          echo "📋 Verifying plugin structure..."
+          ls -la release/integration-siigo-woo/
+          
+          # Verificar que existe el archivo principal del plugin
+          if [ ! -f release/integration-siigo-woo/integration-siigo-woo.php ]; then
+            echo "❌ Error: Main plugin file not found!"
+            exit 1
+          fi
+          
+          echo "✅ Plugin structure verified"
+
+      - name: Create ZIP file
+        run: |
+          cd release
+          zip -r ../integration-siigo-woo.zip integration-siigo-woo/ -x "*.git*" "*.DS_Store"
+          cd ..
+          
+          # Verificar que el ZIP se creó correctamente
+          if [ ! -f integration-siigo-woo.zip ]; then
+            echo "❌ Error: ZIP file was not created!"
+            exit 1
+          fi
+          
+          # Mostrar tamaño del archivo
+          ZIP_SIZE=$(du -h integration-siigo-woo.zip | cut -f1)
+          echo "✅ ZIP created successfully (Size: $ZIP_SIZE)"
+
+      - name: Generate changelog from commits
+        id: changelog
+        run: |
+          echo "📝 Generating changelog..."
+          
+          # Obtener el tag anterior
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          
+          if [ -z "$PREV_TAG" ]; then
+            echo "CHANGELOG=Primera release del plugin" >> $GITHUB_OUTPUT
+          else
+            # Generar changelog desde el último tag
+            CHANGELOG=$(git log $PREV_TAG..HEAD --pretty=format:"- %s" --no-merges)
+            echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+            echo "$CHANGELOG" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ steps.get_version.outputs.VERSION }}
+          body: |
+            ## 🎉 Integration Siigo WooCommerce v${{ steps.get_version.outputs.VERSION }}
+            
+            ### 📦 Instalación
+            
+            1. Descarga el archivo `integration-siigo-woo.zip` adjunto abajo
+            2. Ve a **WordPress** → **Plugins** → **Añadir nuevo** → **Subir plugin**
+            3. Selecciona el archivo ZIP y haz clic en **"Instalar ahora"**
+            4. Activa el plugin y configura tus credenciales de Siigo
+            
+            ### 📋 Cambios en esta versión
+            
+            ${{ steps.changelog.outputs.CHANGELOG }}
+            
+            ### ℹ️ Requisitos
+            
+            - WordPress 6.0 o superior
+            - WooCommerce 9.6 o superior
+            - PHP 8.1 o superior
+            - Plugin: Departamentos y Ciudades de Colombia para WooCommerce
+            
+            ### 📚 Documentación
+            
+            Para ver el changelog completo y documentación detallada, consulta el archivo `readme.txt` incluido en el plugin.
+            
+            ### 🔗 Enlaces
+            
+            - [Sitio web del desarrollador](https://saulmoralespa.com)
+            - [Soporte](https://saulmoralespa.com)
+            - [LinkedIn](https://www.linkedin.com/in/saulmoralespa/)
+            
+            ---
+            
+            **Nota**: Este es un plugin para integración con Siigo Colombia. Asegúrate de tener una cuenta activa en Siigo y tus credenciales API antes de instalar.
+          files: |
+            integration-siigo-woo.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

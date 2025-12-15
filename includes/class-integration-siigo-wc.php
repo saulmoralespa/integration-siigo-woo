@@ -260,9 +260,9 @@ class Integration_Siigo_WC
         $phone = $order->get_billing_phone() ?: $order->get_shipping_phone();
         $phone = self::sanitize_phone_number($phone);
 
-        if(!$country_code) throw new Exception('País no encontrado');
-        if(!$state_code) throw new Exception('Departamento no encontrado');
-        if(!$city_code) throw new Exception('Ciudad no encontrada');
+        if(!$country_code) throw new Exception('Integration Siigo Woocommerce: País no encontrado');
+        if(!$state_code) throw new Exception('Integration Siigo Woocommerce: Departamento no encontrado');
+        if(!$city_code) throw new Exception('Integration Siigo Woocommerce: Ciudad no encontrada');
 
         try {
 
@@ -404,9 +404,9 @@ class Integration_Siigo_WC
                 ];
             }
 
-            if(!self::$integration_settings->document_type) throw new Exception('Tipo de documento no configurado');
-            if(!self::$integration_settings->seller_generate_invoice) throw new Exception('Vendedor no configurado');
-            if(!self::$integration_settings->payment) throw new Exception('Método de pago no configurado');
+            if(!self::$integration_settings->document_type) throw new Exception('Integration Siigo Woocommerce: Tipo de documento no configurado');
+            if(!self::$integration_settings->seller_generate_invoice) throw new Exception('Integration Siigo Woocommerce: Vendedor no configurado');
+            if(!self::$integration_settings->payment) throw new Exception('Integration Siigo Woocommerce: Método de pago no configurado');
 
             $payments = self::get_payments();
             $payment = array_filter($payments, function ($payment) {
@@ -446,11 +446,16 @@ class Integration_Siigo_WC
                 $dataInvoice['number'] = $document['consecutive'];
             }
 
+            if(self::$integration_settings->debug === 'yes'){
+                integration_siigo_wc_smp()->log('Data Invoice: ' . print_r($dataInvoice, true));
+            }
+
             $invoice = self::$siigo->createInvoice($dataInvoice);
             $order->add_order_note( sprintf(__( 'Número de factura Siigo: %s.' ), $invoice['number']));
             $order->add_meta_data('_invoice_number_siigo', $invoice['number']);
             $order->save_meta_data();
         }catch (Exception $exception){
+            $order->add_order_note( $exception->getMessage() );
             integration_siigo_wc_smp()->log($exception->getMessage());
         }
     }
@@ -461,6 +466,9 @@ class Integration_Siigo_WC
 
         try {
             $product = json_decode($request->get_body(), true);
+            if(self::$integration_settings->debug === 'yes'){
+                integration_siigo_wc_smp()->log('Webhook Product: ' . print_r($product, true));
+            }
             $name = $product['name'];
             $sku = $product['code'];
             $price = $product['prices'][0]['price_list'][0]['value'] ?? 0;
@@ -470,6 +478,8 @@ class Integration_Siigo_WC
             $available_quantity = $product['available_quantity'] ?? 0;
             $warehouse = $product['warehouses'][0]['id'] ?? null;
             $product_id = wc_get_product_id_by_sku($sku);
+
+            if(!$sku || !trim($name)) return new WP_REST_Response();
 
             if(!empty(self::$integration_settings->warehouse) &&
                 (int)self::$integration_settings->warehouse !== $warehouse) {
@@ -740,5 +750,84 @@ class Integration_Siigo_WC
             $dni,
             $dv_nit
         ];
+    }
+
+    /**
+     * Verify NIT validation during checkout process.
+     *
+     * Validates that NIT (Colombian tax ID) has between 9 and 10 digits without DV (verification digit).
+     * Applied to both billing and shipping addresses.
+     *
+     * @since 1.0.0
+     * @return void
+     */
+    public static function verify_nit_validation(): void
+    {
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verification handled by WooCommerce checkout process
+        if ( ! isset( $_POST['billing_type_document'] ) ) {
+            return;
+        }
+
+        $billing_type_document = sanitize_text_field( wp_unslash( $_POST['billing_type_document'] ) );
+
+        // Get DNI field key
+        $meta_key_dni = self::$integration_settings->dni_field ?: '_billing_dni';
+        $meta_key_dni = str_replace( '_billing_', '', $meta_key_dni );
+        $billing_dni_key = 'billing_' . $meta_key_dni;
+
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing
+        $billing_dni = isset( $_POST[ $billing_dni_key ] ) ? sanitize_text_field( wp_unslash( $_POST[ $billing_dni_key ] ) ) : '';
+
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing
+        $shipping_type_document = isset( $_POST['shipping_type_document'] ) ? sanitize_text_field( wp_unslash( $_POST['shipping_type_document'] ) ) : '';
+
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing
+        $shipping_dni = isset( $_POST['shipping_dni'] ) ? sanitize_text_field( wp_unslash( $_POST['shipping_dni'] ) ) : '';
+
+        // Validate billing NIT
+        if ( self::is_invalid_nit( $billing_type_document, $billing_dni ) ) {
+            wc_add_notice(
+                __( 'Por favor ingrese un NIT válido de 9 o 10 dígitos sin el DV (Dígito de Verificación).', 'integration-siigo-woo' ),
+                'error'
+            );
+            return;
+        }
+
+        // Validate shipping NIT
+        if ( self::is_invalid_nit( $shipping_type_document, $shipping_dni ) ) {
+            wc_add_notice(
+                __( 'Por favor ingrese un NIT válido de 9 o 10 dígitos sin el DV (Dígito de Verificación) en la dirección de envío.', 'integration-siigo-woo' ),
+                'error'
+            );
+        }
+    }
+
+    /**
+     * Check if NIT is invalid.
+     *
+     * @since 1.0.0
+     * @param string $type_document Document type.
+     * @param string $nit NIT number to validate.
+     * @return bool True if invalid, false otherwise.
+     */
+    private static function is_invalid_nit( string $type_document, string $nit ): bool
+    {
+        if ( $type_document !== 'NIT' ) {
+            return true;
+        }
+
+        if ( empty( $nit ) ) {
+            return true;
+        }
+
+        $nit_length = strlen( $nit );
+
+        // NIT must be between 9 and 10 digits
+        if ( $nit_length < 9 || $nit_length > 10 ) {
+            return true;
+        }
+
+        // NIT must contain only digits
+        return ! ctype_digit( $nit );
     }
 }

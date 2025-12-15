@@ -5,7 +5,8 @@
     "authors": [
         {
             "name": "Saúl Morales Pacheco",
-            "email": "moralespachecopablo@gmail.com"
+            "email": "moralespachecopablo@gmail.com",
+            "role": "Developer"
         }
     ],
     "require": {

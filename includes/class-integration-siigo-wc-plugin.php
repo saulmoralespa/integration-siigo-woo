@@ -49,6 +49,8 @@ class Integration_Siigo_WC_Plugin
      */
     public string $namespace = 'wcsiigointegration/v1';
 
+    public WC_Logger $logger;
+
     public function __construct(
         protected $file,
         protected $version
@@ -59,6 +61,7 @@ class Integration_Siigo_WC_Plugin
         $this->assets = $this->plugin_url . trailingslashit('assets');
         $this->includes_path = $this->plugin_path . trailingslashit('includes');
         $this->lib_path = $this->plugin_path . trailingslashit('lib');
+        $this->logger = new WC_Logger();
     }
 
     public function run_siigo(): void
@@ -113,7 +116,7 @@ class Integration_Siigo_WC_Plugin
         add_filter('woocommerce_default_address_fields', array($this, 'document_woocommerce_fields'));
         add_action('woocommerce_checkout_update_order_meta', array($this, 'document_woocommerce_fields_update_order_meta'));
 
-        add_action('woocommerce_checkout_process', array($this, 'very_nit_validation'));
+        add_action('woocommerce_checkout_process', array('Integration_Siigo_WC', 'verify_nit_validation'));
         add_action('woocommerce_init', array($this, 'register_additional_checkout_fields'));
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts_admin'));
@@ -198,12 +201,24 @@ class Integration_Siigo_WC_Plugin
         return $integrations;
     }
 
-    public function log($message): void
+    /**
+     * Log a message to the WooCommerce logger.
+     *
+     * @param mixed  $message The message to log (string, array, or object).
+     * @param string $level   The log level (debug, info, notice, warning, error, critical, alert, emergency).
+     * @return void
+     */
+    public function log(mixed $message, string $level = 'info' ): void
     {
-        if (is_array($message) || is_object($message))
-            $message = print_r($message, true);
-        $logger = new WC_Logger();
-        $logger->add('integration-siigo', $message);
+        if ( is_array( $message ) || is_object( $message ) ) {
+            $message = wp_json_encode( $message, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE );
+        }
+
+        $this->logger->log(
+            $level,
+            $message,
+            array( 'source' => 'integration-siigo' )
+        );
     }
 
     public function enqueue_scripts(): void
@@ -387,19 +402,6 @@ class Integration_Siigo_WC_Plugin
             $dv = Integration_Siigo_WC::calculateDv($dni);
             $dni = "$dni-$dv";
             update_post_meta($order_id, "_{$prefix}_dni", $dni);
-        }
-    }
-
-    public function very_nit_validation(): void
-    {
-        $billing_type_document = sanitize_text_field($_POST['billing_type_document']);
-        $billing_dni = sanitize_text_field($_POST['billing_dni']);
-        $shipping_type_document = sanitize_text_field($_POST['shipping_type_document']);
-        $shipping_dni = sanitize_text_field($_POST['shipping_dni']);
-
-        if(($billing_type_document === 'NIT' && $billing_dni && strlen($billing_dni) !== 9) ||
-            ($shipping_type_document === 'NIT' && $shipping_dni && strlen($shipping_dni) !== 9)){
-            wc_add_notice( __( '<p>Ingrese un NIT válido sin el DV</p>' ), 'error' );
         }
     }
 
