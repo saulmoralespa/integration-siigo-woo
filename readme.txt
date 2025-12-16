@@ -5,7 +5,7 @@ Tags: siigo, woocommerce, facturacion, contabilidad, colombia, invoice, accounti
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.1
-Stable tag: 0.3.1
+Stable tag: 0.3.2
 WC requires at least: 9.6
 WC tested up to: 9.7
 License: GNU General Public License v3.0
@@ -142,6 +142,9 @@ El plugin registrará el error en los logs de WooCommerce. Puedes revisar los lo
 5. Logs y depuración
 
 == Changelog ==
+
+= 0.3.2 =
+* Mejora validación del campo DNI en el checkout
 
 = 0.3.1 =
 * Mejora validación del campo DNI en el checkout

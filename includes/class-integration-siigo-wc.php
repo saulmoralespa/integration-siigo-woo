@@ -785,7 +785,8 @@ class Integration_Siigo_WC
         $shipping_dni = isset( $_POST['shipping_dni'] ) ? sanitize_text_field( wp_unslash( $_POST['shipping_dni'] ) ) : '';
 
         // Validate billing NIT
-        if ( self::is_invalid_nit( $billing_type_document, $billing_dni ) ) {
+        if ( $billing_type_document === 'NIT' &&
+            self::is_invalid_nit( $billing_dni ) ) {
             wc_add_notice(
                 __( 'Por favor ingrese un NIT válido de 9 o 10 dígitos sin el DV (Dígito de Verificación).', 'integration-siigo-woo' ),
                 'error'
@@ -794,7 +795,8 @@ class Integration_Siigo_WC
         }
 
         // Validate shipping NIT
-        if ( self::is_invalid_nit( $shipping_type_document, $shipping_dni ) ) {
+        if ( $shipping_type_document === 'NIT' &&
+            self::is_invalid_nit( $shipping_dni ) ) {
             wc_add_notice(
                 __( 'Por favor ingrese un NIT válido de 9 o 10 dígitos sin el DV (Dígito de Verificación) en la dirección de envío.', 'integration-siigo-woo' ),
                 'error'
@@ -806,16 +808,11 @@ class Integration_Siigo_WC
      * Check if NIT is invalid.
      *
      * @since 1.0.0
-     * @param string $type_document Document type.
      * @param string $nit NIT number to validate.
      * @return bool True if invalid, false otherwise.
      */
-    private static function is_invalid_nit( string $type_document, string $nit ): bool
+    private static function is_invalid_nit( string $nit ): bool
     {
-        if ( $type_document !== 'NIT' ) {
-            return true;
-        }
-
         if ( empty( $nit ) ) {
             return true;
         }
