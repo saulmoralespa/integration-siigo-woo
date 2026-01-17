@@ -16,6 +16,8 @@ class Integration_Siigo_WC
 
     const SKU_SHIPPING = 'S-P-W';
 
+    const SKU_FEE = 'F-E-E';
+
     public static function test_token($username, $access_key): bool
     {
         try{
@@ -343,6 +345,7 @@ class Integration_Siigo_WC
             }
 
             self::create_product(self::SKU_SHIPPING, "Envío");
+            self::create_product(self::SKU_FEE, "Cargo adicional");
 
             $items = [];
             $tax_rates = [];
@@ -401,6 +404,22 @@ class Integration_Siigo_WC
                     "description" => 'Envío',
                     "quantity" => 1,
                     "price" => $shipping_total
+                ];
+            }
+
+            // Procesar fees de pasarela de pago
+            foreach ($order->get_items('fee') as $fee_item) {
+                $fee_total = wc_format_decimal((float)$fee_item->get_total() + (float)$fee_item->get_total_tax(), 0);
+
+                if ($fee_total == 0) continue;
+
+                $fee_name = apply_filters('wc_siigo_integration_description_fee', $fee_item->get_name(), $fee_item);
+
+                $items[] = [
+                    "code" => self::SKU_FEE,
+                    "description" => $fee_name,
+                    "quantity" => 1,
+                    "price" => $fee_total
                 ];
             }
 

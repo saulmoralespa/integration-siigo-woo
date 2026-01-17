@@ -5,7 +5,7 @@ Tags: siigo, woocommerce, facturacion, contabilidad, colombia, invoice, accounti
 Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.1
-Stable tag: 0.3.2
+Stable tag: 0.3.3
 WC requires at least: 9.6
 WC tested up to: 9.7
 License: GNU General Public License v3.0
@@ -22,6 +22,7 @@ Integration Siigo Woocommerce es un plugin que permite integrar tu tienda WooCom
 * **Sincronización automática de productos**: Sincroniza productos desde Siigo a WooCommerce con precios, stock y descripciones
 * **Control de inventario**: Actualiza automáticamente el stock de productos basado en la disponibilidad en Siigo
 * **Facturación automática**: Genera facturas en Siigo cuando se completa una orden en WooCommerce
+* **Soporte para fees de pasarela de pago**: Incluye automáticamente los cargos adicionales generados por métodos de pago en la factura
 * **Gestión de clientes**: Sincroniza información de clientes entre WooCommerce y Siigo
 * **Campo DNI en checkout**: Añade campo de documento de identidad requerido para facturación
 * **Integración con ciudades y departamentos de Colombia**: Compatible con el plugin de departamentos y ciudades
@@ -142,6 +143,10 @@ El plugin registrará el error en los logs de WooCommerce. Puedes revisar los lo
 5. Logs y depuración
 
 == Changelog ==
+
+= 0.3.3 =
+* Soporte para fees de pasarelas de pago (compatible con Payment Gateway Based Fees and Discounts for WooCommerce)
+* Los cargos adicionales generados por métodos de pago ahora se incluyen automáticamente en la factura de Siigo
 
 = 0.3.2 =
 * Mejora validación del campo DNI en el checkout
