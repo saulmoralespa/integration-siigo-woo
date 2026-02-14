@@ -132,9 +132,9 @@ class WC_Siigo_Integration extends  WC_Integration
         return ob_get_clean();
     }
 
-    public function get_data_options(string $section, string $method, callable $callback)
+    public function get_data_options(string $section, string $method, callable $callback, $initial = []): array
     {
         $data = isset($_GET['section']) && $_GET['section'] === $section ? $method() : [];
-        return array_reduce($data, $callback, []);
+        return array_reduce($data, $callback, $initial);
     }
 }

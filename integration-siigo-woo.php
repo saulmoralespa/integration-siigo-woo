@@ -2,16 +2,16 @@
 /**
  * Plugin Name: Integration Siigo Woocommerce
  * Description: Integración del sistama contable y de facturación Siigo para Woocoommerce
- * Version: 0.3.3
+ * Version: 0.3.4
  * Author: Saúl Morales Pacheco
  * Author URI: https://saulmoralespa.com
  * License: GNU General Public License v3.0
  * License URI: http://www.gnu.org/licenses/gpl-3.0.html
- * WC tested up to: 9.7
+ * WC tested up to: 10.5
  * WC requires at least: 9.6
  * Requires at least: 6.0
- * Tested up to: 6.8
- * Requires PHP: 8.1
+ * Tested up to: 6.9
+ * Requires PHP: 8.2
  * Requires Plugins: woocommerce,departamentos-y-ciudades-de-colombia-para-woocommerce
  */
 
@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if(!defined('INTEGRATION_SIIGO_WC_SMP_VERSION')){
-    define('INTEGRATION_SIIGO_WC_SMP_VERSION', '0.3.3');
+    define('INTEGRATION_SIIGO_WC_SMP_VERSION', '0.3.4');
 }
 
 if(!defined('INTEGRATION_SIIGO_WC_SMP_ID')){
@@ -55,12 +55,12 @@ function integration_siigo_wc_smp_notices($notice): void
 
 function integration_siigo_wc_sm_requirements(): bool
 {
-    if ( !version_compare(PHP_VERSION, '8.1.0', '>=') ) {
+    if ( !version_compare(PHP_VERSION, '8.2.0', '>=') ) {
         if ( is_admin() && ! defined( 'DOING_AJAX' ) ) {
             add_action(
                 'admin_notices',
                 function() {
-                    integration_siigo_wc_smp_notices( 'Integration Siigo Woocommerce: Requiere la versión de php >= 8.1');
+                    integration_siigo_wc_smp_notices( 'Integration Siigo Woocommerce: Requiere la versión de php >= 8.2');
                 }
             );
         }

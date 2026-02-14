@@ -132,7 +132,7 @@ jobs:
             
             - WordPress 6.0 o superior
             - WooCommerce 9.6 o superior
-            - PHP 8.1 o superior
+            - PHP 8.2 o superior
             - Plugin: Departamentos y Ciudades de Colombia para WooCommerce
             
             ### 📚 Documentación

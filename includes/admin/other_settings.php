@@ -10,7 +10,7 @@ $taxes = $this->get_data_options('wc_siigo_integration', 'Integration_Siigo_WC::
     if(!$tax["active"]) return $new_tax;
     $new_tax[$tax["id"]] = "{$tax["name"]}";
     return $new_tax;
-});
+}, ['' => 'Sin impuesto seleccionado']);
 
 $document_types = $this->get_data_options('wc_siigo_integration', 'Integration_Siigo_WC::get_document_types', function($new_document_type, $document_type){
     if(!$document_type['active']) return $new_document_type;

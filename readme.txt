@@ -3,11 +3,11 @@ Contributors: saulmorales
 Donate link: https://saulmoralespa.com/donation
 Tags: siigo, woocommerce, facturacion, contabilidad, colombia, invoice, accounting, integration
 Requires at least: 6.0
-Tested up to: 6.8
-Requires PHP: 8.1
-Stable tag: 0.3.3
+Tested up to: 6.9
+Requires PHP: 8.2
+Stable tag: 0.3.4
 WC requires at least: 9.6
-WC tested up to: 9.7
+WC tested up to: 10.5
 License: GNU General Public License v3.0
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -36,7 +36,7 @@ Integration Siigo Woocommerce es un plugin que permite integrar tu tienda WooCom
 
 * WordPress 6.0 o superior
 * WooCommerce 9.6 o superior
-* PHP 8.1 o superior
+* PHP 8.2 o superior
 * Plugin: Departamentos y Ciudades de Colombia para WooCommerce
 * Cuenta activa en Siigo (Colombia)
 * Credenciales API de Siigo (Username y Access Key)
@@ -143,6 +143,9 @@ El plugin registrará el error en los logs de WooCommerce. Puedes revisar los lo
 5. Logs y depuración
 
 == Changelog ==
+
+= 0.3.4 =
+* Agregado valor vacio por defecto para el campo de Identificador único del impuesto (IVA)
 
 = 0.3.3 =
 * Soporte para fees de pasarelas de pago (compatible con Payment Gateway Based Fees and Discounts for WooCommerce)

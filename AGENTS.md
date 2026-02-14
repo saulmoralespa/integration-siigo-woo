@@ -188,7 +188,7 @@ Descripción detallada del cambio"
 - Minimizar requests HTTP
 
 ### Compatibility
-- Testear con múltiples versiones de PHP (8.1, 8.2, 8.3)
+- Testear con múltiples versiones de PHP (8.2, 8.3)
 - Testear con múltiples versiones de WordPress
 - Testear con múltiples versiones de WooCommerce
 - Considerar compatibilidad con otros plugins
