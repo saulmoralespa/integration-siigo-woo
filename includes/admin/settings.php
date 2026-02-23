@@ -1,6 +1,6 @@
 <?php
 
-wc_enqueue_js( "
+wp_add_inline_script( 'integration-siigo', "
     jQuery(function($) {
     const selectors = {
         siigoIntegrationFields: '#woocommerce_wc_siigo_integration_username, #woocommerce_wc_siigo_integration_access_key, #woocommerce_wc_siigo_integration_webhook_button',
