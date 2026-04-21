@@ -141,6 +141,16 @@ return [
             'data-nonce' => wp_create_nonce( 'integration_siigo_sync_woo_siigo' ),
         ]
     ),
+    'premium_survey' => array(
+        'title' => 'Encuesta de version premium',
+        'type' => 'button',
+        'class' => 'button-primary siigo-send-premium-survey',
+        'description' => 'Ayudanos a priorizar la version premium. Toma menos de 3 minutos.',
+        'text' => 'Responder encuesta',
+        'custom_attributes' => [
+            'data-nonce' => wp_create_nonce( 'integration_siigo_send_premium_survey' ),
+        ]
+    ),
     ...$webhook,
     'invoice' => array(
         'title' => __( 'Factura' ),

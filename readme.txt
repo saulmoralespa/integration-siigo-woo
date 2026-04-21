@@ -5,9 +5,9 @@ Tags: siigo, woocommerce, facturacion, contabilidad, colombia, invoice, accounti
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.2
-Stable tag:  0.3.5
+Stable tag:  0.3.6
 WC requires at least: 10.4
-WC tested up to: 10.5
+WC tested up to: 10.7
 License: GNU General Public License v3.0
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -143,6 +143,9 @@ El plugin registrará el error en los logs de WooCommerce. Puedes revisar los lo
 5. Logs y depuración
 
 == Changelog ==
+
+= 0.3.6 =
+* Compatibilidad con WooCommerce 10.7
 
 = 0.3.4 =
 * Agregado valor vacio por defecto para el campo de Identificador único del impuesto (IVA)

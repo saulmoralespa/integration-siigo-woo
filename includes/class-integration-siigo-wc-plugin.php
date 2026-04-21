@@ -120,12 +120,15 @@ class Integration_Siigo_WC_Plugin
         add_action('woocommerce_init', array($this, 'register_additional_checkout_fields'));
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts_admin'));
+        add_action('admin_notices', array($this, 'premium_survey_admin_notice'));
         add_action('woocommerce_order_status_changed', array('Integration_Siigo_WC', 'generate_invoice'), 10, 3);
         add_action('integration_siigo_wc_smp_schedule', array('Integration_Siigo_WC', 'sync_products_siigo'));
         add_action('integration_siigo_wc_smp_schedule_sync_woo_siigo', array('Integration_Siigo_WC', 'sync_products_woo'));
         add_action('wp_ajax_integration_siigo_sync_products', array($this, 'ajax_integration_siigo_sync_products'));
         add_action('wp_ajax_integration_siigo_sync_woo_siigo', array($this, 'ajax_integration_siigo_sync_woo_siigo'));
         add_action('wp_ajax_integration_siigo_sync_webhook', array($this, 'ajax_integration_siigo_sync_webhook'));
+        add_action('wp_ajax_integration_siigo_send_premium_survey', array($this, 'ajax_integration_siigo_send_premium_survey'));
+        add_action('wp_ajax_integration_siigo_dismiss_premium_survey_notice', array($this, 'ajax_integration_siigo_dismiss_premium_survey_notice'));
         add_action('woocommerce_admin_order_data_after_order_details',  array($this, 'display_custom_editable_field_on_admin_orders'), 10);
         add_action('woocommerce_process_shop_order_meta', array($this, 'save_order_custom_field_meta'), 10);
         add_action('manage_woocommerce_page_wc-orders_custom_column', array($this, 'content_column_invoice'), 10, 2 );
@@ -166,7 +169,11 @@ class Integration_Siigo_WC_Plugin
 
     public function plugin_action_links($links): array
     {
-        $links[] = '<a href="' . admin_url('admin.php?page=wc-settings&tab=integration&section=wc_siigo_integration') . '">' . 'Configuraciones' . '</a>';
+        $settings_url = admin_url('admin.php?page=wc-settings&tab=integration&section=' . INTEGRATION_SIIGO_WC_SMP_ID);
+        $survey_url = add_query_arg('open_premium_survey', '1', $settings_url);
+
+        $links[] = '<a href="' . esc_url($settings_url) . '">' . 'Configuraciones' . '</a>';
+        $links[] = '<a href="' . esc_url($survey_url) . '">' . 'Encuesta Premium' . '</a>';
         $links[] = '<a target="_blank" href="https://shop.saulmoralespa.com/integration-siigo-woocommerce/">' . 'Documentación' . '</a>';
         return $links;
     }
@@ -257,11 +264,163 @@ class Integration_Siigo_WC_Plugin
             );
         }
 
-
-        if($hook === 'woocommerce_page_wc-settings' && isset($_GET['section']) && $_GET['section'] === 'wc_siigo_integration'){
+        if($this->should_enqueue_premium_survey_assets_on_admin((string) $hook)){
             wp_enqueue_script( 'integration-siigo-sweet-alert', $this->assets. 'js/sweetalert2.min.js', array( 'jquery' ), $this->version, true );
             wp_enqueue_script( 'integration-siigo', $this->assets. 'js/integration-siigo.js', array( 'jquery' ), $this->version, true );
         }
+    }
+
+    private function is_siigo_integration_settings_page_request(string $hook): bool
+    {
+        if ($hook !== 'woocommerce_page_wc-settings') {
+            return false;
+        }
+
+        $section = isset($_GET['section']) ? sanitize_key(wp_unslash($_GET['section'])) : '';
+
+        return $section === INTEGRATION_SIIGO_WC_SMP_ID;
+    }
+
+    private function get_integration_settings(): array
+    {
+        $settings = get_option('woocommerce_wc_siigo_integration_settings', array());
+        return is_array($settings) ? $settings : array();
+    }
+
+    private function has_survey_eligible_store(): bool
+    {
+        $settings = $this->get_integration_settings();
+
+        $is_enabled = isset($settings['enabled']) && $settings['enabled'] === 'yes';
+        $has_production_credentials = !empty($settings['username']) && !empty($settings['access_key']);
+        $has_sandbox_credentials = !empty($settings['sandbox_username']) && !empty($settings['sandbox_access_key']);
+
+        return $is_enabled && ($has_production_credentials || $has_sandbox_credentials);
+    }
+
+    private function is_woocommerce_admin_screen(): bool
+    {
+        if (!is_admin() || !function_exists('get_current_screen')) {
+            return false;
+        }
+
+        $screen = get_current_screen();
+
+        if (!$screen) {
+            return false;
+        }
+
+        if (str_starts_with($screen->id, 'woocommerce_page_')) {
+            return true;
+        }
+
+        if (!function_exists('wc_get_screen_ids')) {
+            return false;
+        }
+
+        return in_array($screen->id, wc_get_screen_ids(), true);
+    }
+
+    private function is_siigo_integration_settings_screen(): bool
+    {
+        if (!function_exists('get_current_screen')) {
+            return false;
+        }
+
+        $screen = get_current_screen();
+
+        if (!$screen || $screen->id !== 'woocommerce_page_wc-settings') {
+            return false;
+        }
+
+        $tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : '';
+        $section = isset($_GET['section']) ? sanitize_key(wp_unslash($_GET['section'])) : '';
+
+        return $tab === 'integration' && $section === INTEGRATION_SIIGO_WC_SMP_ID;
+    }
+
+    private function has_user_dismissed_premium_survey_notice(): bool
+    {
+        if (!is_user_logged_in()) {
+            return false;
+        }
+
+        $dismissed = get_user_meta(get_current_user_id(), 'integration_siigo_premium_survey_notice_dismissed', true);
+
+        return $dismissed === 'yes';
+    }
+
+    private function should_expose_survey_on_admin(): bool
+    {
+        if (!current_user_can('manage_woocommerce')) {
+            return false;
+        }
+
+        if (!$this->has_survey_eligible_store()) {
+            return false;
+        }
+
+        if ($this->has_user_dismissed_premium_survey_notice()) {
+            return false;
+        }
+
+        return $this->is_woocommerce_admin_screen();
+    }
+
+    private function should_enqueue_premium_survey_assets_on_admin(string $hook): bool
+    {
+        if ($this->is_siigo_integration_settings_page_request($hook)) {
+            return true;
+        }
+
+        return $this->should_expose_survey_on_admin();
+    }
+
+    public function premium_survey_admin_notice(): void
+    {
+        if (!$this->should_expose_survey_on_admin() || $this->is_siigo_integration_settings_screen()) {
+            return;
+        }
+
+        $settings_url = admin_url('admin.php?page=wc-settings&tab=integration&section=' . INTEGRATION_SIIGO_WC_SMP_ID);
+        $settings_with_survey_url = add_query_arg('open_premium_survey', '1', $settings_url);
+        ?>
+        <div class="notice notice-info is-dismissible siigo-premium-survey-notice" data-dismiss-nonce="<?php echo esc_attr(wp_create_nonce('integration_siigo_dismiss_premium_survey_notice')); ?>">
+            <p>
+                <strong>Integration Siigo Woocommerce: ayudanos a priorizar la version premium.</strong>
+                Esta encuesta toma menos de 3 minutos y nos ayuda a mejorar este plugin para tu tienda.
+            </p>
+            <p>
+                <button type="button" class="button button-primary siigo-send-premium-survey" data-nonce="<?php echo esc_attr(wp_create_nonce('integration_siigo_send_premium_survey')); ?>">
+                    Responder encuesta premium
+                </button>
+                <a class="button button-secondary" href="<?php echo esc_url($settings_with_survey_url); ?>">Abrir desde configuraciones</a>
+            </p>
+        </div>
+        <?php
+    }
+
+    public function ajax_integration_siigo_dismiss_premium_survey_notice(): void
+    {
+        $nonce = isset($_REQUEST['nonce']) ? sanitize_text_field(wp_unslash($_REQUEST['nonce'])) : '';
+
+        if ( ! wp_verify_nonce($nonce, 'integration_siigo_dismiss_premium_survey_notice') ) {
+            wp_send_json(array(
+                'status' => false,
+                'message' => __('No se pudo validar la solicitud.')
+            ));
+        }
+
+        if (!is_user_logged_in() || !current_user_can('manage_woocommerce')) {
+            wp_send_json(array(
+                'status' => false,
+                'message' => __('No tienes permisos para esta acción.')
+            ));
+        }
+
+        update_user_meta(get_current_user_id(), 'integration_siigo_premium_survey_notice_dismissed', 'yes');
+
+        wp_send_json(array('status' => true));
     }
 
     public function ajax_integration_siigo_sync_products(): void
@@ -289,6 +448,145 @@ class Integration_Siigo_WC_Plugin
 
         $status = Integration_Siigo_WC::subscribeWebhook();
         wp_send_json(['status' => $status]);
+    }
+
+    public function ajax_integration_siigo_send_premium_survey(): void
+    {
+        $nonce = isset($_REQUEST['nonce']) ? sanitize_text_field(wp_unslash($_REQUEST['nonce'])) : '';
+
+        if ( ! wp_verify_nonce($nonce, 'integration_siigo_send_premium_survey') ) {
+            wp_send_json(array(
+                'status' => false,
+                'message' => __('No se pudo validar la solicitud. Recarga la pagina e intenta de nuevo.')
+            ));
+        }
+
+        $q1_score = isset($_POST['q1_score']) ? (int) $_POST['q1_score'] : 0;
+        $q2_pain_point = isset($_POST['q2_pain_point']) ? sanitize_text_field(wp_unslash($_POST['q2_pain_point'])) : '';
+        $q3_time_loss = isset($_POST['q3_time_loss']) ? sanitize_text_field(wp_unslash($_POST['q3_time_loss'])) : '';
+        $q5_most_critical = isset($_POST['q5_most_critical']) ? sanitize_text_field(wp_unslash($_POST['q5_most_critical'])) : '';
+        $q6_billing_model = isset($_POST['q6_billing_model']) ? sanitize_text_field(wp_unslash($_POST['q6_billing_model'])) : '';
+        $q7_price_range = isset($_POST['q7_price_range']) ? sanitize_text_field(wp_unslash($_POST['q7_price_range'])) : '';
+        $q8_open_feedback = isset($_POST['q8_open_feedback']) ? sanitize_textarea_field(wp_unslash($_POST['q8_open_feedback'])) : '';
+        $consent_yes_no = isset($_POST['consent_yes_no']) && sanitize_text_field(wp_unslash($_POST['consent_yes_no'])) === 'yes' ? 'yes' : 'no';
+
+        $q4_top_features = isset($_POST['q4_top_features']) ? wp_unslash($_POST['q4_top_features']) : array();
+
+        if ( is_string($q4_top_features) ) {
+            $decoded_features = json_decode($q4_top_features, true);
+            if ( JSON_ERROR_NONE === json_last_error() && is_array($decoded_features) ) {
+                $q4_top_features = $decoded_features;
+            } else {
+                $q4_top_features = array_filter(array_map('trim', explode(',', $q4_top_features)));
+            }
+        }
+
+        if ( ! is_array($q4_top_features) ) {
+            $q4_top_features = array();
+        }
+
+        $q4_top_features = array_slice(
+            array_values(
+                array_unique(
+                    array_filter(
+                        array_map(
+                            static fn($value): string => sanitize_text_field((string) $value),
+                            $q4_top_features
+                        )
+                    )
+                )
+            ),
+            0,
+            3
+        );
+
+        if ($q1_score < 1 || $q1_score > 10 || empty($q4_top_features) || '' === $q7_price_range) {
+            wp_send_json(array(
+                'status' => false,
+                'message' => __('Completa satisfaccion (1-10), Top 3 funcionalidades y rango de precio para enviar la encuesta.')
+            ));
+        }
+
+        $response_id = wp_generate_uuid4();
+        $date_time = wp_date('Y-m-d H:i:s');
+        $date_time_iso = wp_date('c');
+
+        $site_name = get_bloginfo('name');
+        $site_url = home_url();
+
+        $default_country = get_option('woocommerce_default_country', '');
+        $country = is_string($default_country) ? explode(':', $default_country)[0] : '';
+        $currency = function_exists('get_woocommerce_currency') ? get_woocommerce_currency() : get_option('woocommerce_currency', 'N/A');
+
+        $recipient = apply_filters('integration_siigo_premium_survey_email_recipient', 'moralespachecopablo@gmail.com');
+        $recipient = is_array($recipient)
+            ? array_filter(array_map('sanitize_email', $recipient))
+            : sanitize_email((string) $recipient);
+
+        if (empty($recipient)) {
+            $this->log('No premium survey email recipient configured', 'error');
+            wp_send_json(array(
+                'status' => false,
+                'message' => __('No hay correo de destino configurado para la encuesta premium.')
+            ));
+        }
+
+        $admin_email = sanitize_email((string) get_option('admin_email'));
+        $headers = array(
+            'Content-Type: text/plain; charset=UTF-8'
+        );
+
+        if (!empty($admin_email)) {
+            $headers[] = sprintf('Reply-To: %s', $admin_email);
+        }
+
+        $subject = sprintf(
+            '[Siigo Woo] Respuesta encuesta premium | %s | %s',
+            $site_url,
+            $date_time
+        );
+
+        $message_lines = array(
+            sprintf('Response ID: %s', $response_id),
+            sprintf('Fecha envio: %s', $date_time_iso),
+            sprintf('Sitio: %s', $site_name),
+            sprintf('URL tienda: %s', $site_url),
+            sprintf('Pais/moneda: %s / %s', $country ?: 'N/A', $currency ?: 'N/A'),
+            sprintf('Version plugin: %s', (string) $this->version),
+            sprintf('Version WP/WC: %s / %s', get_bloginfo('version'), defined('WC_VERSION') ? WC_VERSION : 'N/A'),
+            sprintf('Satisfaccion actual (1-10): %d', $q1_score),
+            sprintf('Dolor principal actual: %s', $q2_pain_point ?: 'N/A'),
+            sprintf('Tiempo semanal perdido: %s', $q3_time_loss ?: 'N/A'),
+            sprintf('Top 3 features premium: %s', implode(', ', $q4_top_features)),
+            sprintf('Feature mas critica: %s', $q5_most_critical ?: 'N/A'),
+            sprintf('Modelo de cobro preferido: %s', $q6_billing_model ?: 'N/A'),
+            sprintf('Rango de precio mensual: %s', $q7_price_range),
+            sprintf('Comentario abierto: %s', $q8_open_feedback ?: 'N/A'),
+            sprintf('Consentimiento contacto: %s', $consent_yes_no),
+        );
+
+        $mail_sent = wp_mail($recipient, $subject, implode("\n", $message_lines), $headers);
+
+        if (!$mail_sent) {
+            $this->log(
+                array(
+                    'event' => 'premium_survey_send_failed',
+                    'response_id' => $response_id,
+                    'site_url' => $site_url,
+                ),
+                'error'
+            );
+
+            wp_send_json(array(
+                'status' => false,
+                'message' => __('No fue posible enviar tu respuesta por email. Intenta nuevamente.')
+            ));
+        }
+
+        wp_send_json(array(
+            'status' => true,
+            'message' => __('Gracias. Tu respuesta fue enviada correctamente.')
+        ));
     }
 
     public function invoice_column(array $columns): array
