@@ -383,7 +383,7 @@ class Integration_Siigo_WC
                     "description" => apply_filters('wc_siigo_integration_description_item', $product->get_name()),
                     "quantity" => $item->get_quantity(),
                     "discount" => $discount,
-                    "price" => wc_format_decimal($item->get_total() / $item->get_quantity(), 0)
+                    "price" => wc_format_decimal($item->get_subtotal() / $item->get_quantity(), 0)
                 ];
 
                 if($tax_percent && self::$integration_settings->tax){
