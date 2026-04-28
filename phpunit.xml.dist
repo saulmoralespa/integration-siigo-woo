@@ -15,7 +15,5 @@
 
     <php>
         <env name="WP_PHPUNIT__TESTS_CONFIG" value="tests/wp-config.php" />
-        <!-- Para ejecución desde local (fuera de Docker) -->
-        <env name="WP_DB_HOST" value="127.0.0.1:3307" />
     </php>
 </phpunit>

@@ -136,6 +136,11 @@
                     ${q1Options}
                 </select>
 
+                <div id="siigo-survey-q1-motivo-wrapper" style="display:none;margin-bottom:12px;">
+                    <label for="siigo-survey-q1-motivo" style="display:block;margin:8px 0 6px;"><strong>¿Por qué diste esa puntuación? (requerido) *</strong></label>
+                    <textarea id="siigo-survey-q1-motivo" class="swal2-textarea" style="width:100%;margin:0;" rows="3" maxlength="500" placeholder="Cuéntanos qué podemos mejorar..."></textarea>
+                </div>
+
                 <label for="siigo-survey-q2" style="display:block;margin:8px 0 6px;">2. Cual es tu dolor principal hoy?</label>
                 <select id="siigo-survey-q2" class="swal2-select" style="width:100%;margin:0 0 12px;">
                     ${buildSelectOptions(premiumSurveyOptions.q2)}
@@ -179,9 +184,19 @@
             topFeatures.push($(this).val());
         });
 
+        const q1Score = parseInt($('#siigo-survey-q1').val(), 10);
+
         if (!$('#siigo-survey-q1').val() || !$('#siigo-survey-q7').val() || topFeatures.length === 0) {
             Swal.showValidationMessage('Completa satisfaccion (1-10), Top funcionalidades y rango de precio.');
             return false;
+        }
+
+        if (q1Score < 8) {
+            const motivo = $('#siigo-survey-q1-motivo').val().trim();
+            if (!motivo) {
+                Swal.showValidationMessage('Por favor explica el motivo de tu baja satisfacción.');
+                return false;
+            }
         }
 
         if (topFeatures.length > 3) {
@@ -190,7 +205,8 @@
         }
 
         return {
-            q1_score: $('#siigo-survey-q1').val(),
+            q1_score: q1Score,
+            q1_motivo: $('#siigo-survey-q1-motivo').val().trim(),
             q2_pain_point: $('#siigo-survey-q2').val(),
             q3_time_loss: $('#siigo-survey-q3').val(),
             q4_top_features: topFeatures,
@@ -254,6 +270,17 @@
             confirmButtonText: 'Enviar respuesta',
             cancelButtonText: 'Cancelar',
             focusConfirm: false,
+            didOpen: () => {
+                $('#siigo-survey-q1').on('change', function () {
+                    const score = parseInt($(this).val(), 10);
+                    if (score < 8) {
+                        $('#siigo-survey-q1-motivo-wrapper').show();
+                    } else {
+                        $('#siigo-survey-q1-motivo-wrapper').hide();
+                        $('#siigo-survey-q1-motivo').val('');
+                    }
+                });
+            },
             preConfirm: collectPremiumSurveyData
         }).then((result) => {
             if (!result.isConfirmed || !result.value) {

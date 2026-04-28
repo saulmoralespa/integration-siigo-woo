@@ -376,6 +376,102 @@ class Integration_Siigo_WC_Plugin
         return $this->should_expose_survey_on_admin();
     }
 
+    /**
+     * Validates and sanitizes the premium survey payload.
+     *
+     * @param array $payload Raw survey data (keys match form field names).
+     * @return array{valid: bool, data?: array, error?: string}
+     */
+    private function validate_survey_payload(array $payload): array
+    {
+        $q1_score         = isset($payload['q1_score'])         ? (int) $payload['q1_score']                                                                    : 0;
+        $q1_motivo        = isset($payload['q1_motivo'])        ? substr(trim(sanitize_text_field(wp_unslash((string) $payload['q1_motivo']))), 0, 500)          : '';
+        $q2_pain_point    = isset($payload['q2_pain_point'])    ? sanitize_text_field(wp_unslash((string) $payload['q2_pain_point']))                            : '';
+        $q3_time_loss     = isset($payload['q3_time_loss'])     ? sanitize_text_field(wp_unslash((string) $payload['q3_time_loss']))                             : '';
+        $q5_most_critical = isset($payload['q5_most_critical']) ? sanitize_text_field(wp_unslash((string) $payload['q5_most_critical']))                         : '';
+        $q6_billing_model = isset($payload['q6_billing_model']) ? sanitize_text_field(wp_unslash((string) $payload['q6_billing_model']))                         : '';
+        $q7_price_range   = isset($payload['q7_price_range'])   ? sanitize_text_field(wp_unslash((string) $payload['q7_price_range']))                           : '';
+        $q8_open_feedback = isset($payload['q8_open_feedback']) ? sanitize_textarea_field(wp_unslash((string) $payload['q8_open_feedback']))                     : '';
+        $consent_yes_no   = isset($payload['consent_yes_no']) && sanitize_text_field(wp_unslash((string) $payload['consent_yes_no'])) === 'yes' ? 'yes' : 'no';
+
+        // Normalise q4_top_features: accept array, JSON string, or CSV string.
+        $q4_raw = isset($payload['q4_top_features']) ? $payload['q4_top_features'] : array();
+
+        if ( is_string($q4_raw) ) {
+            $decoded = json_decode($q4_raw, true);
+            if ( JSON_ERROR_NONE === json_last_error() && is_array($decoded) ) {
+                $q4_raw = $decoded;
+            } else {
+                $q4_raw = array_filter(array_map('trim', explode(',', $q4_raw)));
+            }
+        }
+
+        if ( ! is_array($q4_raw) ) {
+            $q4_raw = array();
+        }
+
+        $q4_top_features = array_slice(
+            array_values(
+                array_unique(
+                    array_filter(
+                        array_map(
+                            static fn( $v ): string => sanitize_text_field((string) $v),
+                            $q4_raw
+                        )
+                    )
+                )
+            ),
+            0,
+            3
+        );
+
+        // --- Validation rules ---
+
+        if ( $q1_score < 1 || $q1_score > 10 ) {
+            return array(
+                'valid' => false,
+                'error' => __('La satisfaccion debe ser un valor entre 1 y 10.'),
+            );
+        }
+
+        if ( $q1_score < 8 && '' === $q1_motivo ) {
+            return array(
+                'valid' => false,
+                'error' => __('Por favor explica el motivo de tu baja satisfaccion.'),
+            );
+        }
+
+        if ( empty($q4_top_features) ) {
+            return array(
+                'valid' => false,
+                'error' => __('Selecciona al menos una funcionalidad premium.'),
+            );
+        }
+
+        if ( '' === $q7_price_range ) {
+            return array(
+                'valid' => false,
+                'error' => __('Selecciona un rango de precio.'),
+            );
+        }
+
+        return array(
+            'valid' => true,
+            'data'  => array(
+                'q1_score'         => $q1_score,
+                'q1_motivo'        => $q1_motivo,
+                'q2_pain_point'    => $q2_pain_point,
+                'q3_time_loss'     => $q3_time_loss,
+                'q4_top_features'  => $q4_top_features,
+                'q5_most_critical' => $q5_most_critical,
+                'q6_billing_model' => $q6_billing_model,
+                'q7_price_range'   => $q7_price_range,
+                'q8_open_feedback' => $q8_open_feedback,
+                'consent_yes_no'   => $consent_yes_no,
+            ),
+        );
+    }
+
     public function premium_survey_admin_notice(): void
     {
         if (!$this->should_expose_survey_on_admin() || $this->is_siigo_integration_settings_screen()) {
@@ -456,66 +552,37 @@ class Integration_Siigo_WC_Plugin
 
         if ( ! wp_verify_nonce($nonce, 'integration_siigo_send_premium_survey') ) {
             wp_send_json(array(
-                'status' => false,
+                'status'  => false,
                 'message' => __('No se pudo validar la solicitud. Recarga la pagina e intenta de nuevo.')
             ));
         }
 
-        $q1_score = isset($_POST['q1_score']) ? (int) $_POST['q1_score'] : 0;
-        $q2_pain_point = isset($_POST['q2_pain_point']) ? sanitize_text_field(wp_unslash($_POST['q2_pain_point'])) : '';
-        $q3_time_loss = isset($_POST['q3_time_loss']) ? sanitize_text_field(wp_unslash($_POST['q3_time_loss'])) : '';
-        $q5_most_critical = isset($_POST['q5_most_critical']) ? sanitize_text_field(wp_unslash($_POST['q5_most_critical'])) : '';
-        $q6_billing_model = isset($_POST['q6_billing_model']) ? sanitize_text_field(wp_unslash($_POST['q6_billing_model'])) : '';
-        $q7_price_range = isset($_POST['q7_price_range']) ? sanitize_text_field(wp_unslash($_POST['q7_price_range'])) : '';
-        $q8_open_feedback = isset($_POST['q8_open_feedback']) ? sanitize_textarea_field(wp_unslash($_POST['q8_open_feedback'])) : '';
-        $consent_yes_no = isset($_POST['consent_yes_no']) && sanitize_text_field(wp_unslash($_POST['consent_yes_no'])) === 'yes' ? 'yes' : 'no';
-
-        $q4_top_features = isset($_POST['q4_top_features']) ? wp_unslash($_POST['q4_top_features']) : array();
-
-        if ( is_string($q4_top_features) ) {
-            $decoded_features = json_decode($q4_top_features, true);
-            if ( JSON_ERROR_NONE === json_last_error() && is_array($decoded_features) ) {
-                $q4_top_features = $decoded_features;
-            } else {
-                $q4_top_features = array_filter(array_map('trim', explode(',', $q4_top_features)));
-            }
-        }
-
-        if ( ! is_array($q4_top_features) ) {
-            $q4_top_features = array();
-        }
-
-        $q4_top_features = array_slice(
-            array_values(
-                array_unique(
-                    array_filter(
-                        array_map(
-                            static fn($value): string => sanitize_text_field((string) $value),
-                            $q4_top_features
-                        )
-                    )
-                )
-            ),
-            0,
-            3
-        );
-
-        if ($q1_score < 1 || $q1_score > 10 || empty($q4_top_features) || '' === $q7_price_range) {
+        if ( ! is_user_logged_in() || ! current_user_can('manage_woocommerce') ) {
             wp_send_json(array(
-                'status' => false,
-                'message' => __('Completa satisfaccion (1-10), Top 3 funcionalidades y rango de precio para enviar la encuesta.')
+                'status'  => false,
+                'message' => __('No tienes permisos para esta accion.')
             ));
         }
 
-        $response_id = wp_generate_uuid4();
-        $date_time = wp_date('Y-m-d H:i:s');
-        $date_time_iso = wp_date('c');
+        $validation = $this->validate_survey_payload($_POST);
 
-        $site_name = get_bloginfo('name');
-        $site_url = home_url();
+        if ( ! $validation['valid'] ) {
+            wp_send_json(array(
+                'status'  => false,
+                'message' => $validation['error']
+            ));
+        }
+
+        $data = $validation['data'];
+
+        $response_id   = wp_generate_uuid4();
+        $date_time     = wp_date('Y-m-d H:i:s');
+        $date_time_iso = wp_date('c');
+        $site_name     = get_bloginfo('name');
+        $site_url      = home_url();
 
         $default_country = get_option('woocommerce_default_country', '');
-        $country = is_string($default_country) ? explode(':', $default_country)[0] : '';
+        $country  = is_string($default_country) ? explode(':', $default_country)[0] : '';
         $currency = function_exists('get_woocommerce_currency') ? get_woocommerce_currency() : get_option('woocommerce_currency', 'N/A');
 
         $recipient = apply_filters('integration_siigo_premium_survey_email_recipient', 'moralespachecopablo@gmail.com');
@@ -523,20 +590,18 @@ class Integration_Siigo_WC_Plugin
             ? array_filter(array_map('sanitize_email', $recipient))
             : sanitize_email((string) $recipient);
 
-        if (empty($recipient)) {
+        if ( empty($recipient) ) {
             $this->log('No premium survey email recipient configured', 'error');
             wp_send_json(array(
-                'status' => false,
+                'status'  => false,
                 'message' => __('No hay correo de destino configurado para la encuesta premium.')
             ));
         }
 
         $admin_email = sanitize_email((string) get_option('admin_email'));
-        $headers = array(
-            'Content-Type: text/plain; charset=UTF-8'
-        );
+        $headers     = array('Content-Type: text/plain; charset=UTF-8');
 
-        if (!empty($admin_email)) {
+        if ( ! empty($admin_email) ) {
             $headers[] = sprintf('Reply-To: %s', $admin_email);
         }
 
@@ -547,44 +612,45 @@ class Integration_Siigo_WC_Plugin
         );
 
         $message_lines = array(
-            sprintf('Response ID: %s', $response_id),
-            sprintf('Fecha envio: %s', $date_time_iso),
-            sprintf('Sitio: %s', $site_name),
-            sprintf('URL tienda: %s', $site_url),
-            sprintf('Pais/moneda: %s / %s', $country ?: 'N/A', $currency ?: 'N/A'),
-            sprintf('Version plugin: %s', (string) $this->version),
-            sprintf('Version WP/WC: %s / %s', get_bloginfo('version'), defined('WC_VERSION') ? WC_VERSION : 'N/A'),
-            sprintf('Satisfaccion actual (1-10): %d', $q1_score),
-            sprintf('Dolor principal actual: %s', $q2_pain_point ?: 'N/A'),
-            sprintf('Tiempo semanal perdido: %s', $q3_time_loss ?: 'N/A'),
-            sprintf('Top 3 features premium: %s', implode(', ', $q4_top_features)),
-            sprintf('Feature mas critica: %s', $q5_most_critical ?: 'N/A'),
-            sprintf('Modelo de cobro preferido: %s', $q6_billing_model ?: 'N/A'),
-            sprintf('Rango de precio mensual: %s', $q7_price_range),
-            sprintf('Comentario abierto: %s', $q8_open_feedback ?: 'N/A'),
-            sprintf('Consentimiento contacto: %s', $consent_yes_no),
+            sprintf('Response ID: %s',                    $response_id),
+            sprintf('Fecha envio: %s',                    $date_time_iso),
+            sprintf('Sitio: %s',                          $site_name),
+            sprintf('URL tienda: %s',                     $site_url),
+            sprintf('Pais/moneda: %s / %s',               $country ?: 'N/A', $currency ?: 'N/A'),
+            sprintf('Version plugin: %s',                 (string) $this->version),
+            sprintf('Version WP/WC: %s / %s',            get_bloginfo('version'), defined('WC_VERSION') ? WC_VERSION : 'N/A'),
+            sprintf('Satisfaccion actual (1-10): %d',     $data['q1_score']),
+            sprintf('Motivo baja satisfaccion: %s',       $data['q1_motivo']        ?: 'N/A'),
+            sprintf('Dolor principal actual: %s',         $data['q2_pain_point']    ?: 'N/A'),
+            sprintf('Tiempo semanal perdido: %s',         $data['q3_time_loss']     ?: 'N/A'),
+            sprintf('Top 3 features premium: %s',         implode(', ', $data['q4_top_features'])),
+            sprintf('Feature mas critica: %s',            $data['q5_most_critical'] ?: 'N/A'),
+            sprintf('Modelo de cobro preferido: %s',      $data['q6_billing_model'] ?: 'N/A'),
+            sprintf('Rango de precio mensual: %s',        $data['q7_price_range']),
+            sprintf('Comentario abierto: %s',             $data['q8_open_feedback'] ?: 'N/A'),
+            sprintf('Consentimiento contacto: %s',        $data['consent_yes_no']),
         );
 
         $mail_sent = wp_mail($recipient, $subject, implode("\n", $message_lines), $headers);
 
-        if (!$mail_sent) {
+        if ( ! $mail_sent ) {
             $this->log(
                 array(
-                    'event' => 'premium_survey_send_failed',
+                    'event'       => 'premium_survey_send_failed',
                     'response_id' => $response_id,
-                    'site_url' => $site_url,
+                    'site_url'    => $site_url,
                 ),
                 'error'
             );
 
             wp_send_json(array(
-                'status' => false,
+                'status'  => false,
                 'message' => __('No fue posible enviar tu respuesta por email. Intenta nuevamente.')
             ));
         }
 
         wp_send_json(array(
-            'status' => true,
+            'status'  => true,
             'message' => __('Gracias. Tu respuesta fue enviada correctamente.')
         ));
     }
